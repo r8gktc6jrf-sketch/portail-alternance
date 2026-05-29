@@ -21,7 +21,8 @@ type CVDepose = {
 
 export default function Home() {
   const [email, setEmail] = useState("");
-  const [utilisateur, setUtilisateur] = useState<AccesInterne | null>(null);
+  const [utilisateur, setUtilisateur] =
+    useState<AccesInterne | null>(null);
   const [erreur, setErreur] = useState("");
   const [cvs, setCvs] = useState<CVDepose[]>([]);
 
@@ -59,9 +60,7 @@ export default function Home() {
   }
 
   function getStatsUtilisateur() {
-    if (!utilisateur) {
-      return [];
-    }
+    if (!utilisateur) return [];
 
     if (peutVoirTousLesCampus(utilisateur.role)) {
       const stats: Record<string, number> = {};
@@ -80,29 +79,14 @@ export default function Home() {
       }));
     }
 
-    if (utilisateur.role === "RRE") {
-      const total = cvs.filter(
-        (cv) => cv.campus === utilisateur.campus
-      ).length;
-
-      return [
-        {
-          campus: utilisateur.campus,
-          total,
-        },
-      ];
-    }
-
-    const totalDeposesParCRE = cvs.filter(
-      (cv) =>
-        cv.campus === utilisateur.campus &&
-        cv.deposeParEmail === utilisateur.email
+    const total = cvs.filter(
+      (cv) => cv.campus === utilisateur.campus
     ).length;
 
     return [
       {
         campus: utilisateur.campus,
-        total: totalDeposesParCRE,
+        total,
       },
     ];
   }
@@ -119,14 +103,37 @@ export default function Home() {
         padding: "50px",
       }}
     >
-      <h1
+      <div
         style={{
-          fontSize: "52px",
-          marginBottom: "10px",
+          display: "flex",
+          flexDirection: "row-reverse",
+          alignItems: "center",
+          justifyContent: "space-between",
+          backgroundColor: "white",
+          padding: "20px 30px",
+          borderRadius: "16px",
+          marginBottom: "40px",
         }}
       >
-        Portail Alternance
-      </h1>
+        <img
+          src="/logo.png"
+          alt="Logo Skolae"
+          style={{
+            height: "90px",
+            maxWidth: "300px",
+            objectFit: "contain",
+          }}
+        />
+
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "42px",
+          }}
+        >
+          Portail Alternance
+        </h1>
+      </div>
 
       <p
         style={{
@@ -156,9 +163,7 @@ export default function Home() {
           </p>
 
           <p>{utilisateur.email}</p>
-
           <p>Rôle : {utilisateur.role}</p>
-
           <p>Campus de référence : {utilisateur.campus}</p>
 
           <h3>CV déposés</h3>
@@ -262,9 +267,15 @@ export default function Home() {
 
           <p>Déposez une offre et recevez des CV compatibles.</p>
 
-          <Link href="/entreprise">
-            <button>Accéder au dépôt d'offre</button>
-          </Link>
+          <div
+            style={{
+              marginTop: "36px",
+            }}
+          >
+            <Link href="/entreprise">
+              <button>Déposer une offre</button>
+            </Link>
+          </div>
         </div>
       </section>
 

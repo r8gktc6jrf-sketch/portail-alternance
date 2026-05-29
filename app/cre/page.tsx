@@ -3,6 +3,11 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { AccesInterne, peutVoirTousLesCampus } from "../data/access";
+import {
+  campusOptions,
+  getMarquesPourCampus,
+  getPromosPourCampusEtMarque,
+} from "../data/filieres";
 
 type CV = {
   nom: string;
@@ -10,50 +15,59 @@ type CV = {
   campus: string;
   marque: string;
   niveau: string;
+  promo: string;
+  nomEtudiant: string;
+  prenomEtudiant: string;
   deposeParNom: string;
   deposeParEmail: string;
   dateDepot: string;
 };
 
-const campusMarques: Record<string, string[]> = {
-  "Campus Eductive Aix": ["2I ACADEMY", "EFAB", "EFET CREA", "EIML", "ENGDE", "ESGI", "ESUPCOM", "ISA", "ISFJ", "MAESTRIS", "MODART", "PPA", "PPA Sport"],
-  "Campus Eductive Bordeaux": ["2I ACADEMY", "EFAB", "EFET CREA", "EIML", "ENGDE", "ESGI", "ICAN", "ISA", "ISFJ", "MAESTRIS", "MODART", "PPA", "PPA Sport"],
-  "Campus SKOLAE Le Havre": ["2I ACADEMY", "ESGI", "PPA"],
-  "Campus Eductive Lille Vauban": ["2I ACADEMY", "ENGDE", "ESGI", "MAESTRIS", "PPA", "PPA Sport"],
-  "Campus Eductive Lille Liberté": ["EFAB", "EFFICOM", "EIML", "MODART", "NEMETRA"],
-  "Campus Sciences-U Lyon": ["2I ACADEMY", "ECITV", "EFAB", "EFET CREA", "EIML", "ENGDE", "ESGI", "ESUPCOM", "ICAN", "ISA", "ISFJ", "MAESTRIS", "MODART", "PPA", "PPA Sport"],
-  "Campus SKOLAE Montpellier": ["2I ACADEMY", "ESGI", "PPA"],
-  "Campus Eductive Nantes": ["2I ACADEMY", "EFAB", "EFET CREA", "ESGI", "ISA", "ISFJ", "MAESTRIS", "MODART", "PPA", "PPA Sport"],
-  "Campus SKOLAE Nice": ["2I ACADEMY", "ESGI", "PPA"],
-  "Campus SKOLAE Orléans": ["2I ACADEMY", "ESGI", "PPA"],
-  "Campus PPA Paris": ["PPA"],
-  "Campus ESGI Paris": ["ESGI"],
-  "Campus ICAN Paris": ["ICAN"],
-  "Campus EIML Paris": ["EIML"],
-  "Campus MODART Paris": ["MODART"],
-  "Campus ESUPCOM Paris": ["ESUPCOM"],
-  "Campus ISFJ Paris": ["ISFJ"],
-  "Campus ESC Paris": ["ESC"],
-  "Campus EFAB Paris": ["EFAB"],
-  "Campus ENGDE Paris": ["ENGDE"],
-  "Campus ESIS Paris": ["ESIS"],
-  "Campus ISA Paris": ["ISA"],
-  "Campus Ecole W Paris": ["ECOLE W"],
-  "Campus C.F.P.J Paris": ["CFPJ"],
-  "Campus SKOLAE Poitiers": ["2I ACADEMY", "ESGI", "PPA"],
-  "Campus SKOLAE Rouen": ["2I ACADEMY", "ESGI", "PPA"],
-  "Campus SKOLAE Tours": ["2I ACADEMY", "ECOLE W", "EFAB", "ENGDE", "ESGI", "ICAN", "ISA", "MAESTRIS", "PPA"],
-  "Campus Eductive Rennes": ["ECITV", "ECOLE W", "EFAB", "EFET CREA", "EIML", "ENGDE", "ESGI", "MAESTRIS"],
-  "Campus Eductive Toulon": ["ECITV", "ECOLE W", "EFAB", "ENGDE", "ESGI", "ISA", "MAESTRIS", "PPA", "PPA Sport"],
-  "Campus Eductive Toulouse": ["ECOLE W", "EFAB", "EFET CREA", "ENGDE", "ESGI", "ISA", "MAESTRIS", "PPA", "PPA Sport"],
-  "Campus Eductive Grenoble": ["EFAB", "EFET CREA", "ENGDE", "ESGI", "ICAN", "ISA", "ISFJ", "MAESTRIS", "PPA", "PPA Sport"],
-  "Campus Eductive Reims": ["EFAB", "EFET CREA", "EIML", "ENGDE", "ESGI", "ESUPCOM", "ISA", "ISFJ", "MAESTRIS", "MODART", "PPA", "PPA Sport"],
-};
-
 const niveaux = ["Bac +1", "Bac +2", "Bac +3", "Bac +4", "Bac +5"];
+
+function niveauEnNumero(niveau: string) {
+  return niveau.replace("Bac +", "");
+}
+
+function villeDepuisCampus(campus: string) {
+  const c = campus.toUpperCase();
+
+  if (c.includes("AIX")) return "AIX-EN-PROVENCE";
+  if (c.includes("BORDEAUX")) return "BORDEAUX";
+  if (c.includes("LE HAVRE")) return "LE HAVRE";
+  if (c.includes("LILLE")) return "LILLE";
+  if (c.includes("LYON")) return "LYON";
+  if (c.includes("MONTPELLIER")) return "MONTPELLIER";
+  if (c.includes("NANTES")) return "NANTES";
+  if (c.includes("NICE")) return "NICE";
+  if (c.includes("ORLÉANS") || c.includes("ORLEANS")) return "ORLEANS";
+  if (c.includes("PARIS")) return "PARIS";
+  if (c.includes("POITIERS")) return "POITIERS";
+  if (c.includes("ROUEN")) return "ROUEN";
+  if (c.includes("TOURS")) return "TOURS";
+  if (c.includes("RENNES")) return "RENNES";
+  if (c.includes("TOULON")) return "TOULON";
+  if (c.includes("TOULOUSE")) return "TOULOUSE";
+  if (c.includes("GRENOBLE")) return "GRENOBLE";
+  if (c.includes("REIMS")) return "REIMS";
+
+  return campus.toUpperCase();
+}
 
 function retrouverCampusReference(campusUtilisateur: string) {
   const campusMaj = campusUtilisateur.toUpperCase();
+
+  const trouve = campusOptions.find((campus) =>
+    campusMaj.includes(
+      campus
+        .toUpperCase()
+        .replace("CAMPUS ", "")
+        .replace("EDUCTIVE ", "")
+        .replace("SKOLAE ", "")
+    )
+  );
+
+  if (trouve) return trouve;
 
   if (campusMaj.includes("PPA PARIS")) return "Campus PPA Paris";
   if (campusMaj.includes("ESGI PARIS")) return "Campus ESGI Paris";
@@ -91,10 +105,13 @@ export default function CrePage() {
   const [campus, setCampus] = useState("");
   const [marque, setMarque] = useState("");
   const [niveau, setNiveau] = useState("");
+  const [promo, setPromo] = useState("");
+
+  const [nomEtudiant, setNomEtudiant] = useState("");
+  const [prenomEtudiant, setPrenomEtudiant] = useState("");
 
   const [cvs, setCvs] = useState<CV[]>([]);
   const [fichierSelectionne, setFichierSelectionne] = useState<File | null>(null);
-  const [nomFichier, setNomFichier] = useState("");
   const [voirMesCV, setVoirMesCV] = useState(false);
 
   useEffect(() => {
@@ -120,23 +137,45 @@ export default function CrePage() {
     }
   }, []);
 
+  function genererNomCV(fichier: File) {
+    const extension = fichier.name.includes(".")
+      ? "." + fichier.name.split(".").pop()
+      : "";
+
+    const numero = niveauEnNumero(niveau);
+    const ville = villeDepuisCampus(campus);
+
+    return `${nomEtudiant.trim().toUpperCase()} ${prenomEtudiant.trim()} ${marque} ${numero}${promo} ${ville}${extension}`;
+  }
+
   function enregistrerCV() {
     if (!utilisateur) {
       alert("Vous devez être connecté.");
       return;
     }
 
-    if (!fichierSelectionne || !campus || !marque || !niveau) {
-      alert("Choisis un campus, une marque, un niveau et un CV.");
+    if (
+      !fichierSelectionne ||
+      !campus ||
+      !marque ||
+      !niveau ||
+      !promo ||
+      !nomEtudiant ||
+      !prenomEtudiant
+    ) {
+      alert("Renseigne le campus, la marque, le niveau, la filière, le nom, le prénom et le CV.");
       return;
     }
 
     const nouveauCV: CV = {
-      nom: nomFichier || fichierSelectionne.name,
+      nom: genererNomCV(fichierSelectionne),
       url: URL.createObjectURL(fichierSelectionne),
       campus,
       marque,
       niveau,
+      promo,
+      nomEtudiant: nomEtudiant.trim().toUpperCase(),
+      prenomEtudiant: prenomEtudiant.trim(),
       deposeParNom: utilisateur.nom,
       deposeParEmail: utilisateur.email,
       dateDepot: new Date().toLocaleString("fr-FR"),
@@ -148,7 +187,8 @@ export default function CrePage() {
     localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
 
     setFichierSelectionne(null);
-    setNomFichier("");
+    setNomEtudiant("");
+    setPrenomEtudiant("");
   }
 
   function supprimerCV(indexGlobal: number) {
@@ -159,12 +199,26 @@ export default function CrePage() {
 
   function exporterCSV() {
     const lignes = [
-      ["CV", "Campus", "Marque", "Niveau", "Déposé par", "Email déposant", "Date dépôt"],
+      [
+        "CV",
+        "Nom étudiant",
+        "Prénom étudiant",
+        "Campus",
+        "Marque",
+        "Niveau",
+        "Filière",
+        "Déposé par",
+        "Email déposant",
+        "Date dépôt",
+      ],
       ...cvsVisibles.map((cv) => [
         cv.nom,
+        cv.nomEtudiant || "",
+        cv.prenomEtudiant || "",
         cv.campus,
         cv.marque,
         cv.niveau,
+        cv.promo || "",
         cv.deposeParNom,
         cv.deposeParEmail,
         cv.dateDepot,
@@ -175,7 +229,10 @@ export default function CrePage() {
       .map((ligne) => ligne.map((valeur) => `"${valeur}"`).join(";"))
       .join("\n");
 
-    const blob = new Blob([contenu], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([contenu], {
+      type: "text/csv;charset=utf-8;",
+    });
+
     const url = URL.createObjectURL(blob);
 
     const lien = document.createElement("a");
@@ -203,7 +260,10 @@ export default function CrePage() {
   const modeMonCampus = mode === "mon";
 
   const cvsVisibles = cvs
-    .map((cv, indexGlobal) => ({ ...cv, indexGlobal }))
+    .map((cv, indexGlobal) => ({
+      ...cv,
+      indexGlobal,
+    }))
     .filter((cv) => {
       if (visionGlobale) return true;
       if (visionCampus) return cv.campus === campusReference;
@@ -211,7 +271,11 @@ export default function CrePage() {
     });
 
   const cvsDuDossier = cvsVisibles.filter(
-    (cv) => cv.campus === campus && cv.marque === marque && cv.niveau === niveau
+    (cv) =>
+      cv.campus === campus &&
+      cv.marque === marque &&
+      cv.niveau === niveau &&
+      cv.promo === promo
   );
 
   const mesCV = cvs
@@ -232,7 +296,9 @@ export default function CrePage() {
       cv.deposeParEmail === utilisateur.email
   ).length;
 
-  const marquesDisponibles = campus ? campusMarques[campus] || [] : [];
+  const marquesDisponibles = campus ? getMarquesPourCampus(campus) : [];
+  const promosDisponibles =
+    campus && marque ? getPromosPourCampusEtMarque(campus, marque) : [];
 
   return (
     <main style={{ padding: "40px", fontFamily: "Arial", color: "black" }}>
@@ -270,7 +336,8 @@ export default function CrePage() {
 
         {campus && (
           <p>
-            Campus sélectionné : <strong>{campus}</strong> — {nombreCVCampusSelectionne} CV déposé(s)
+            Campus sélectionné : <strong>{campus}</strong> —{" "}
+            {nombreCVCampusSelectionne} CV déposé(s)
           </p>
         )}
 
@@ -294,7 +361,7 @@ export default function CrePage() {
               <div
                 key={cv.indexGlobal}
                 style={{
-                  width: "240px",
+                  width: "260px",
                   border: "1px solid #ccc",
                   borderRadius: "12px",
                   padding: "12px",
@@ -305,6 +372,7 @@ export default function CrePage() {
                 <p>{cv.campus}</p>
                 <p>{cv.marque}</p>
                 <p>{cv.niveau}</p>
+                <p>{cv.promo}</p>
                 <p>{cv.dateDepot}</p>
 
                 <a href={cv.url} target="_blank">
@@ -317,7 +385,11 @@ export default function CrePage() {
       )}
 
       {(visionGlobale || visionCampus) && (
-        <button type="button" onClick={exporterCSV} style={{ marginBottom: "20px" }}>
+        <button
+          type="button"
+          onClick={exporterCSV}
+          style={{ marginBottom: "20px" }}
+        >
           Exporter les CV visibles
         </button>
       )}
@@ -343,11 +415,12 @@ export default function CrePage() {
             setCampus(e.target.value);
             setMarque("");
             setNiveau("");
+            setPromo("");
           }}
         >
           <option value="">Choisir un campus</option>
 
-          {Object.keys(campusMarques).map((campusOption) => (
+          {campusOptions.map((campusOption) => (
             <option key={campusOption}>{campusOption}</option>
           ))}
         </select>
@@ -359,6 +432,7 @@ export default function CrePage() {
           onChange={(e) => {
             setMarque(e.target.value);
             setNiveau("");
+            setPromo("");
           }}
           style={{ marginLeft: modeMonCampus ? "0px" : "15px" }}
         >
@@ -373,7 +447,10 @@ export default function CrePage() {
       {marque && (
         <select
           value={niveau}
-          onChange={(e) => setNiveau(e.target.value)}
+          onChange={(e) => {
+            setNiveau(e.target.value);
+            setPromo("");
+          }}
           style={{ marginLeft: "15px" }}
         >
           <option value="">Choisir un niveau</option>
@@ -385,10 +462,53 @@ export default function CrePage() {
       )}
 
       {niveau && (
+        <select
+          value={promo}
+          onChange={(e) => setPromo(e.target.value)}
+          style={{ marginLeft: "15px" }}
+        >
+          <option value="">Choisir une filière</option>
+
+          {promosDisponibles.map((promoOption) => (
+            <option key={promoOption}>{promoOption}</option>
+          ))}
+        </select>
+      )}
+
+      {promo && (
         <div style={{ marginTop: "30px" }}>
           <h2>
-            Dossier : {campus} / {marque} / {niveau}
+            Dossier : {campus} / {marque} / {niveau} / {promo}
           </h2>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "15px",
+              flexWrap: "wrap",
+              marginBottom: "15px",
+            }}
+          >
+            <input
+              placeholder="NOM étudiant"
+              value={nomEtudiant}
+              onChange={(e) => setNomEtudiant(e.target.value)}
+              style={{
+                padding: "10px",
+                width: "220px",
+              }}
+            />
+
+            <input
+              placeholder="Prénom étudiant"
+              value={prenomEtudiant}
+              onChange={(e) => setPrenomEtudiant(e.target.value)}
+              style={{
+                padding: "10px",
+                width: "220px",
+              }}
+            />
+          </div>
 
           <input
             type="file"
@@ -399,21 +519,19 @@ export default function CrePage() {
               if (!fichier) return;
 
               setFichierSelectionne(fichier);
-              setNomFichier(fichier.name);
             }}
           />
 
           {fichierSelectionne && (
             <div style={{ marginTop: "15px" }}>
-              <input
-                value={nomFichier}
-                onChange={(e) => setNomFichier(e.target.value)}
-                style={{
-                  width: "300px",
-                  padding: "10px",
-                  marginRight: "10px",
-                }}
-              />
+              <p>
+                Nom généré :{" "}
+                <strong>
+                  {nomEtudiant && prenomEtudiant
+                    ? genererNomCV(fichierSelectionne)
+                    : "Renseigne NOM et Prénom"}
+                </strong>
+              </p>
 
               <button type="button" onClick={enregistrerCV}>
                 Enregistrer le CV
@@ -428,8 +546,8 @@ export default function CrePage() {
               <div
                 key={cv.indexGlobal}
                 style={{
-                  width: "230px",
-                  minHeight: "210px",
+                  width: "260px",
+                  minHeight: "230px",
                   border: "1px solid #ccc",
                   borderRadius: "12px",
                   padding: "12px",
@@ -441,7 +559,12 @@ export default function CrePage() {
                 <p style={{ fontSize: "12px" }}>{cv.campus}</p>
                 <p style={{ fontSize: "12px" }}>{cv.marque}</p>
                 <p style={{ fontSize: "12px" }}>{cv.niveau}</p>
-                <p style={{ fontSize: "12px" }}>Déposé par : {cv.deposeParNom}</p>
+                <p style={{ fontSize: "12px" }}>{cv.promo}</p>
+
+                <p style={{ fontSize: "12px" }}>
+                  Déposé par : {cv.deposeParNom}
+                </p>
+
                 <p style={{ fontSize: "12px" }}>{cv.deposeParEmail}</p>
 
                 <a href={cv.url} target="_blank">
