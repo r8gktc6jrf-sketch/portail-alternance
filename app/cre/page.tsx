@@ -277,26 +277,19 @@ export default function CrePage() {
     setPrenomEtudiant("");
   }
 
-function basculerStatut(indexGlobal: number) {
+function supprimerCV(indexGlobal: number) {
   const cv = cvs[indexGlobal];
 
   if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
-    alert("Tu peux modifier uniquement les CV que tu as déposés.");
+    alert("Tu peux supprimer uniquement les CV que tu as déposés.");
     return;
   }
 
-  const nouveauxCV: CV[] = cvs.map((cvItem, index) => {
-    if (index !== indexGlobal) return cvItem;
-
-    return {
-      ...cvItem,
-      statut: cvItem.statut === "place" ? "recherche" : "place",
-    };
-  });
+  const nouveauxCV = cvs.filter((_, index) => index !== indexGlobal);
 
   sauvegarderCV(nouveauxCV);
   rechercherCV(nouveauxCV);
-}
+ }
 
   function rechercherCV(sourceCV = cvs) {
     if (!utilisateur) return;
