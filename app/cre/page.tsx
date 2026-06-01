@@ -21,6 +21,7 @@ type CV = {
   deposeParNom: string;
   deposeParEmail: string;
   dateDepot: string;
+  statut?: "recherche" | "place";
 };
 
 const niveaux = ["Bac +1", "Bac +2", "Bac +3", "Bac +4", "Bac +5"];
@@ -32,24 +33,24 @@ function niveauEnNumero(niveau: string) {
 function villeDepuisCampus(campus: string) {
   const c = campus.toUpperCase();
 
-  if (c.includes("AIX")) return "AIX-EN-PROVENCE";
-  if (c.includes("BORDEAUX")) return "BORDEAUX";
-  if (c.includes("LE HAVRE")) return "LE HAVRE";
+  if (c.includes("PARIS")) return "PARIS";
   if (c.includes("LILLE")) return "LILLE";
   if (c.includes("LYON")) return "LYON";
-  if (c.includes("MONTPELLIER")) return "MONTPELLIER";
+  if (c.includes("AIX")) return "AIX-EN-PROVENCE";
+  if (c.includes("BORDEAUX")) return "BORDEAUX";
   if (c.includes("NANTES")) return "NANTES";
+  if (c.includes("TOULOUSE")) return "TOULOUSE";
+  if (c.includes("RENNES")) return "RENNES";
+  if (c.includes("TOULON")) return "TOULON";
+  if (c.includes("GRENOBLE")) return "GRENOBLE";
+  if (c.includes("REIMS")) return "REIMS";
+  if (c.includes("MONTPELLIER")) return "MONTPELLIER";
   if (c.includes("NICE")) return "NICE";
   if (c.includes("ORLÉANS") || c.includes("ORLEANS")) return "ORLEANS";
-  if (c.includes("PARIS")) return "PARIS";
   if (c.includes("POITIERS")) return "POITIERS";
   if (c.includes("ROUEN")) return "ROUEN";
   if (c.includes("TOURS")) return "TOURS";
-  if (c.includes("RENNES")) return "RENNES";
-  if (c.includes("TOULON")) return "TOULON";
-  if (c.includes("TOULOUSE")) return "TOULOUSE";
-  if (c.includes("GRENOBLE")) return "GRENOBLE";
-  if (c.includes("REIMS")) return "REIMS";
+  if (c.includes("LE HAVRE")) return "LE HAVRE";
 
   return campus.toUpperCase();
 }
@@ -133,7 +134,13 @@ export default function CrePage() {
     const sauvegarde = localStorage.getItem("cvs-cre");
 
     if (sauvegarde) {
-      setCvs(JSON.parse(sauvegarde));
+      const cvsCharges: CV[] = JSON.parse(sauvegarde).map((cv: CV) => ({
+        ...cv,
+        statut: cv.statut || "recherche",
+      }));
+
+      setCvs(cvsCharges);
+      localStorage.setItem("cvs-cre", JSON.stringify(cvsCharges));
     }
   }, []);
 
@@ -179,6 +186,7 @@ export default function CrePage() {
       deposeParNom: utilisateur.nom,
       deposeParEmail: utilisateur.email,
       dateDepot: new Date().toLocaleString("fr-FR"),
+      statut: "recherche",
     };
 
     const nouveauxCV = [...cvs, nouveauCV];
@@ -192,7 +200,35 @@ export default function CrePage() {
   }
 
   function supprimerCV(indexGlobal: number) {
+    const cv = cvs[indexGlobal];
+
+    if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
+      alert("Tu peux supprimer uniquement les CV que tu as déposés.");
+      return;
+    }
+
     const nouveauxCV = cvs.filter((_, index) => index !== indexGlobal);
+    setCvs(nouveauxCV);
+    localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
+  }
+
+  function basculerStatut(indexGlobal: number) {
+    const cv = cvs[indexGlobal];
+
+    if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
+      alert("Tu peux modifier uniquement les CV que tu as déposés.");
+      return;
+    }
+
+    const nouveauxCV = cvs.map((cvItem, index) => {
+      if (index !== indexGlobal) return cvItem;
+
+      return {
+        ...cvItem,
+        statut: cvItem.statut === "place" ? "recherche" : "place",
+      };
+    });
+
     setCvs(nouveauxCV);
     localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
   }
@@ -204,9 +240,11 @@ export default function CrePage() {
         "Nom étudiant",
         "Prénom étudiant",
         "Campus",
+        "Ville",
         "Marque",
         "Niveau",
         "Filière",
+        "Statut",
         "Déposé par",
         "Email déposant",
         "Date dépôt",
@@ -216,9 +254,11 @@ export default function CrePage() {
         cv.nomEtudiant || "",
         cv.prenomEtudiant || "",
         cv.campus,
+        villeDepuisCampus(cv.campus),
         cv.marque,
         cv.niveau,
         cv.promo || "",
+        cv.statut === "place" ? "Placé" : "En recherche d'alternance",
         cv.deposeParNom,
         cv.deposeParEmail,
         cv.dateDepot,
@@ -286,6 +326,14 @@ export default function CrePage() {
     ? cvs.filter((cv) => cv.campus === campus).length
     : 0;
 
+  const nombreRechercheCampusSelectionne = campus
+    ? cvs.filter((cv) => cv.campus === campus && (cv.statut || "recherche") === "recherche").length
+    : 0;
+
+  const nombrePlacesCampusSelectionne = campus
+    ? cvs.filter((cv) => cv.campus === campus && cv.statut === "place").length
+    : 0;
+
   const nombreCVCampusReference = cvs.filter(
     (cv) => cv.campus === campusReference
   ).length;
@@ -335,10 +383,14 @@ export default function CrePage() {
         )}
 
         {campus && (
-          <p>
-            Campus sélectionné : <strong>{campus}</strong> —{" "}
-            {nombreCVCampusSelectionne} CV déposé(s)
-          </p>
+          <>
+            <p>
+              Campus sélectionné : <strong>{campus}</strong> —{" "}
+              {nombreCVCampusSelectionne} CV déposé(s)
+            </p>
+            <p>En recherche d’alternance : {nombreRechercheCampusSelectionne}</p>
+            <p>Placés : {nombrePlacesCampusSelectionne}</p>
+          </>
         )}
 
         <button
@@ -370,14 +422,48 @@ export default function CrePage() {
               >
                 <strong>{cv.nom}</strong>
                 <p>{cv.campus}</p>
+                <p>{villeDepuisCampus(cv.campus)}</p>
                 <p>{cv.marque}</p>
                 <p>{cv.niveau}</p>
                 <p>{cv.promo}</p>
-                <p>{cv.dateDepot}</p>
+                <p>
+                  Statut :{" "}
+                  <strong>
+                    {cv.statut === "place"
+                      ? "Placé"
+                      : "En recherche d'alternance"}
+                  </strong>
+                </p>
 
                 <a href={cv.url} target="_blank">
                   Ouvrir le CV
                 </a>
+
+                <br />
+
+                <button
+                  type="button"
+                  onClick={() => basculerStatut(cv.indexGlobal)}
+                  style={{ marginTop: "10px" }}
+                >
+                  {cv.statut === "place"
+                    ? "Remettre en recherche"
+                    : "Marquer comme placé"}
+                </button>
+
+                <br />
+
+                <button
+                  type="button"
+                  onClick={() => supprimerCV(cv.indexGlobal)}
+                  style={{
+                    marginTop: "10px",
+                    backgroundColor: "red",
+                    color: "white",
+                  }}
+                >
+                  Supprimer
+                </button>
               </div>
             ))}
           </div>
@@ -547,7 +633,7 @@ export default function CrePage() {
                 key={cv.indexGlobal}
                 style={{
                   width: "260px",
-                  minHeight: "230px",
+                  minHeight: "260px",
                   border: "1px solid #ccc",
                   borderRadius: "12px",
                   padding: "12px",
@@ -557,9 +643,19 @@ export default function CrePage() {
                 <strong>{cv.nom}</strong>
 
                 <p style={{ fontSize: "12px" }}>{cv.campus}</p>
+                <p style={{ fontSize: "12px" }}>{villeDepuisCampus(cv.campus)}</p>
                 <p style={{ fontSize: "12px" }}>{cv.marque}</p>
                 <p style={{ fontSize: "12px" }}>{cv.niveau}</p>
                 <p style={{ fontSize: "12px" }}>{cv.promo}</p>
+
+                <p style={{ fontSize: "12px" }}>
+                  Statut :{" "}
+                  <strong>
+                    {cv.statut === "place"
+                      ? "Placé"
+                      : "En recherche d'alternance"}
+                  </strong>
+                </p>
 
                 <p style={{ fontSize: "12px" }}>
                   Déposé par : {cv.deposeParNom}
@@ -571,19 +667,35 @@ export default function CrePage() {
                   Ouvrir le CV
                 </a>
 
-                <br />
+                {cv.deposeParEmail === utilisateur.email && (
+                  <>
+                    <br />
 
-                <button
-                  type="button"
-                  onClick={() => supprimerCV(cv.indexGlobal)}
-                  style={{
-                    marginTop: "10px",
-                    backgroundColor: "red",
-                    color: "white",
-                  }}
-                >
-                  Supprimer
-                </button>
+                    <button
+                      type="button"
+                      onClick={() => basculerStatut(cv.indexGlobal)}
+                      style={{ marginTop: "10px" }}
+                    >
+                      {cv.statut === "place"
+                        ? "Remettre en recherche"
+                        : "Marquer comme placé"}
+                    </button>
+
+                    <br />
+
+                    <button
+                      type="button"
+                      onClick={() => supprimerCV(cv.indexGlobal)}
+                      style={{
+                        marginTop: "10px",
+                        backgroundColor: "red",
+                        color: "white",
+                      }}
+                    >
+                      Supprimer
+                    </button>
+                  </>
+                )}
               </div>
             ))}
           </div>
