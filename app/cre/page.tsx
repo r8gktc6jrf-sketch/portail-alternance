@@ -2,12 +2,26 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { AccesInterne, peutVoirTousLesCampus } from "../data/access";
+import {
+  AccesInterne,
+  accesInternes,
+  peutVoirTousLesCampus,
+} from "../data/access";
 import {
   campusOptions,
   getMarquesPourCampus,
   getPromosPourCampusEtMarque,
 } from "../data/filieres";
+
+type Presentation = {
+  offreId: string;
+  nomEntreprise: string;
+  titrePoste: string;
+  ville: string;
+  niveauRecherche: string;
+  typeContrat: string;
+  datePresentation: string;
+};
 
 type CV = {
   nom: string;
@@ -22,9 +36,39 @@ type CV = {
   deposeParEmail: string;
   dateDepot: string;
   statut?: "recherche" | "place";
+  presentations?: Presentation[];
+};
+
+type Offre = {
+  id: string;
+  nomEntreprise: string;
+  nomContact: string;
+  emailContact: string;
+  telephoneContact: string;
+  titrePoste: string;
+  description: string;
+  ville: string;
+  niveau: string;
+  typeContrat: string;
+  dureeContrat: string;
+  competences: string[];
+  nombreCV: number;
+  dateDepot: string;
+  cvProposes: string[];
 };
 
 const niveaux = ["Bac +1", "Bac +2", "Bac +3", "Bac +4", "Bac +5"];
+
+function estDireCo(role: string) {
+  const r = role.toUpperCase();
+
+  return (
+    r === "DIRE CO" ||
+    r === "DIRECO" ||
+    r === "DIRECTION CO" ||
+    r === "DIRECTION COMMERCIALE"
+  );
+}
 
 function niveauEnNumero(niveau: string) {
   return niveau.replace("Bac +", "");
@@ -112,8 +156,28 @@ export default function CrePage() {
   const [prenomEtudiant, setPrenomEtudiant] = useState("");
 
   const [cvs, setCvs] = useState<CV[]>([]);
-  const [fichierSelectionne, setFichierSelectionne] = useState<File | null>(null);
+  const [offres, setOffres] = useState<Offre[]>([]);
+  const [resultatsRecherche, setResultatsRecherche] = useState<
+    (CV & { indexGlobal: number })[]
+  >([]);
+
+  const [rechercheEffectuee, setRechercheEffectuee] = useState(false);
+  const [fichierSelectionne, setFichierSelectionne] = useState<File | null>(
+    null
+  );
+
   const [voirMesCV, setVoirMesCV] = useState(false);
+  const [voirToutesOffres, setVoirToutesOffres] = useState(false);
+
+  const [nomRechercheEquipe, setNomRechercheEquipe] = useState("");
+  const [resultatEquipe, setResultatEquipe] = useState<{
+    nom: string;
+    email: string;
+    campus: string;
+    total: number;
+    recherche: number;
+    places: number;
+  } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -131,18 +195,32 @@ export default function CrePage() {
       }
     }
 
-    const sauvegarde = localStorage.getItem("cvs-cre");
+    const sauvegardeCV = localStorage.getItem("cvs-cre");
 
-    if (sauvegarde) {
-      const cvsCharges: CV[] = JSON.parse(sauvegarde).map((cv: CV) => ({
-        ...cv,
-        statut: cv.statut || "recherche",
-      }));
+    if (sauvegardeCV) {
+      const cvsCharges: CV[] = JSON.parse(sauvegardeCV)
+        .filter((cv: CV) => cv && cv.campus && cv.campus !== "undefined")
+        .map((cv: CV) => ({
+          ...cv,
+          statut: cv.statut || "recherche",
+          presentations: cv.presentations || [],
+        }));
 
       setCvs(cvsCharges);
       localStorage.setItem("cvs-cre", JSON.stringify(cvsCharges));
     }
+
+    const sauvegardeOffres = localStorage.getItem("offres-entreprises");
+
+    if (sauvegardeOffres) {
+      setOffres(JSON.parse(sauvegardeOffres));
+    }
   }, []);
+
+  function sauvegarderCV(nouveauxCV: CV[]) {
+    setCvs(nouveauxCV);
+    localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
+  }
 
   function genererNomCV(fichier: File) {
     const extension = fichier.name.includes(".")
@@ -170,7 +248,9 @@ export default function CrePage() {
       !nomEtudiant ||
       !prenomEtudiant
     ) {
-      alert("Renseigne le campus, la marque, le niveau, la filière, le nom, le prénom et le CV.");
+      alert(
+        "Renseigne le campus, la marque, le niveau, la filière, le nom, le prénom et le CV."
+      );
       return;
     }
 
@@ -187,12 +267,10 @@ export default function CrePage() {
       deposeParEmail: utilisateur.email,
       dateDepot: new Date().toLocaleString("fr-FR"),
       statut: "recherche",
+      presentations: [],
     };
 
-    const nouveauxCV = [...cvs, nouveauCV];
-
-    setCvs(nouveauxCV);
-    localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
+    sauvegarderCV([...cvs, nouveauCV]);
 
     setFichierSelectionne(null);
     setNomEtudiant("");
@@ -208,8 +286,8 @@ export default function CrePage() {
     }
 
     const nouveauxCV = cvs.filter((_, index) => index !== indexGlobal);
-    setCvs(nouveauxCV);
-    localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
+    sauvegarderCV(nouveauxCV);
+    rechercherCV(nouveauxCV);
   }
 
   function basculerStatut(indexGlobal: number) {
@@ -229,11 +307,53 @@ export default function CrePage() {
       };
     });
 
-    setCvs(nouveauxCV);
-    localStorage.setItem("cvs-cre", JSON.stringify(nouveauxCV));
+    sauvegarderCV(nouveauxCV);
+    rechercherCV(nouveauxCV);
+  }
+
+  function rechercherCV(sourceCV = cvs) {
+    if (!utilisateur) return;
+
+    const campusReference = retrouverCampusReference(utilisateur.campus);
+    const visionGlobale = peutVoirTousLesCampus(utilisateur.role);
+    const visionCampus = utilisateur.role === "RRE";
+
+    const resultats = sourceCV
+      .map((cv, indexGlobal) => ({ ...cv, indexGlobal }))
+      .filter((cv) => {
+        if (!cv.campus || cv.campus === "undefined") return false;
+
+        if (!visionGlobale && visionCampus && cv.campus !== campusReference) {
+          return false;
+        }
+
+        if (!visionGlobale && utilisateur.role === "CRE" && cv.campus !== campusReference) {
+          return false;
+        }
+
+        if (campus && cv.campus !== campus) return false;
+        if (marque && cv.marque !== marque) return false;
+        if (niveau && cv.niveau !== niveau) return false;
+        if (promo && cv.promo !== promo) return false;
+
+        return true;
+      });
+
+    setResultatsRecherche(resultats);
+    setRechercheEffectuee(true);
   }
 
   function exporterCSV() {
+    if (!rechercheEffectuee) {
+      alert("Lance d’abord une recherche.");
+      return;
+    }
+
+    if (marque === "") {
+      alert("Sélectionne au minimum une marque avant d’exporter.");
+      return;
+    }
+
     const lignes = [
       [
         "CV",
@@ -248,8 +368,9 @@ export default function CrePage() {
         "Déposé par",
         "Email déposant",
         "Date dépôt",
+        "Nombre de présentations",
       ],
-      ...cvsVisibles.map((cv) => [
+      ...resultatsRecherche.map((cv) => [
         cv.nom,
         cv.nomEtudiant || "",
         cv.prenomEtudiant || "",
@@ -262,6 +383,7 @@ export default function CrePage() {
         cv.deposeParNom,
         cv.deposeParEmail,
         cv.dateDepot,
+        String((cv.presentations || []).length),
       ]),
     ];
 
@@ -274,8 +396,8 @@ export default function CrePage() {
     });
 
     const url = URL.createObjectURL(blob);
-
     const lien = document.createElement("a");
+
     lien.href = url;
     lien.download = "export-cv.csv";
     lien.click();
@@ -296,27 +418,17 @@ export default function CrePage() {
 
   const visionGlobale = peutVoirTousLesCampus(utilisateur.role);
   const visionCampus = utilisateur.role === "RRE";
+  const accesToutesOffres = estDireCo(utilisateur.role);
   const campusReference = retrouverCampusReference(utilisateur.campus);
   const modeMonCampus = mode === "mon";
 
   const cvsVisibles = cvs
-    .map((cv, indexGlobal) => ({
-      ...cv,
-      indexGlobal,
-    }))
+    .map((cv, indexGlobal) => ({ ...cv, indexGlobal }))
     .filter((cv) => {
+      if (!cv.campus || cv.campus === "undefined") return false;
       if (visionGlobale) return true;
-      if (visionCampus) return cv.campus === campusReference;
       return cv.campus === campusReference;
     });
-
-  const cvsDuDossier = cvsVisibles.filter(
-    (cv) =>
-      cv.campus === campus &&
-      cv.marque === marque &&
-      cv.niveau === niveau &&
-      cv.promo === promo
-  );
 
   const mesCV = cvs
     .map((cv, indexGlobal) => ({ ...cv, indexGlobal }))
@@ -327,26 +439,62 @@ export default function CrePage() {
     : 0;
 
   const nombreRechercheCampusSelectionne = campus
-    ? cvs.filter((cv) => cv.campus === campus && (cv.statut || "recherche") === "recherche").length
+    ? cvs.filter(
+        (cv) =>
+          cv.campus === campus && (cv.statut || "recherche") === "recherche"
+      ).length
     : 0;
 
   const nombrePlacesCampusSelectionne = campus
     ? cvs.filter((cv) => cv.campus === campus && cv.statut === "place").length
     : 0;
 
-  const nombreCVCampusReference = cvs.filter(
-    (cv) => cv.campus === campusReference
-  ).length;
-
-  const nombreCVMesDepotsCampusReference = cvs.filter(
-    (cv) =>
-      cv.campus === campusReference &&
-      cv.deposeParEmail === utilisateur.email
-  ).length;
-
   const marquesDisponibles = campus ? getMarquesPourCampus(campus) : [];
   const promosDisponibles =
     campus && marque ? getPromosPourCampusEtMarque(campus, marque) : [];
+
+  function rechercherEquipe() {
+    const texte = nomRechercheEquipe.trim().toLowerCase();
+
+    if (!texte) {
+      setResultatEquipe(null);
+      return;
+    }
+
+    const personnesVisibles = accesInternes.filter((personne) => {
+      if (personne.role !== "CRE") return false;
+
+      if (visionGlobale) return true;
+
+      return retrouverCampusReference(personne.campus) === campusReference;
+    });
+
+    const personne = personnesVisibles.find(
+      (p) =>
+        p.nom.toLowerCase().includes(texte) ||
+        p.email.toLowerCase().includes(texte)
+    );
+
+    if (!personne) {
+      setResultatEquipe(null);
+      alert("Aucun CRE trouvé.");
+      return;
+    }
+
+    const depots = cvs.filter((cv) => cv.deposeParEmail === personne.email);
+
+    setResultatEquipe({
+      nom: personne.nom,
+      email: personne.email,
+      campus: personne.campus,
+      total: depots.length,
+      recherche: depots.filter((cv) => (cv.statut || "recherche") === "recherche")
+        .length,
+      places: depots.filter((cv) => cv.statut === "place").length,
+    });
+  }
+
+  const listeAAfficher = rechercheEffectuee ? resultatsRecherche : cvsVisibles;
 
   return (
     <main style={{ padding: "40px", fontFamily: "Arial", color: "black" }}>
@@ -369,18 +517,7 @@ export default function CrePage() {
         <p>Rôle : {utilisateur.role}</p>
         <p>Campus de référence : {utilisateur.campus}</p>
 
-        {visionGlobale && <p>Total CV visibles tous campus : {cvs.length}</p>}
-
-        {visionCampus && (
-          <p>Nombre de CV sur mon campus : {nombreCVCampusReference}</p>
-        )}
-
-        {utilisateur.role === "CRE" && (
-          <>
-            <p>Nombre de CV sur mon campus : {nombreCVCampusReference}</p>
-            <p>Mes CV déposés sur mon campus : {nombreCVMesDepotsCampusReference}</p>
-          </>
-        )}
+        {visionGlobale && <p>Total CV visibles tous campus : {cvsVisibles.length}</p>}
 
         {campus && (
           <>
@@ -396,11 +533,95 @@ export default function CrePage() {
         <button
           type="button"
           onClick={() => setVoirMesCV(!voirMesCV)}
-          style={{ marginTop: "10px" }}
+          style={{ marginTop: "10px", marginRight: "10px" }}
         >
           {voirMesCV ? "Masquer mes CV" : "Voir mes CV"}
         </button>
+
+        {accesToutesOffres && (
+          <button
+            type="button"
+            onClick={() => setVoirToutesOffres(!voirToutesOffres)}
+            style={{ marginTop: "10px" }}
+          >
+            {voirToutesOffres ? "Masquer toutes les offres" : "Toutes les offres"}
+          </button>
+        )}
       </section>
+
+      {accesToutesOffres && voirToutesOffres && (
+        <section
+          style={{
+            backgroundColor: "#f6f2ea",
+            padding: "15px",
+            borderRadius: "12px",
+            marginBottom: "20px",
+          }}
+        >
+          <h2>Toutes les offres déposées</h2>
+
+          {offres.length === 0 && <p>Aucune offre déposée pour le moment.</p>}
+
+          {offres.map((offre) => (
+            <div
+              key={offre.id}
+              style={{
+                backgroundColor: "white",
+                padding: "15px",
+                borderRadius: "12px",
+                marginBottom: "12px",
+              }}
+            >
+              <strong>{offre.nomEntreprise}</strong>
+              <p>Poste : {offre.titrePoste}</p>
+              <p>Ville : {offre.ville}</p>
+              <p>Niveau recherché : {offre.niveau}</p>
+              <p>Contrat : {offre.typeContrat}</p>
+              <p>Durée : {offre.dureeContrat}</p>
+              <p>Contact : {offre.nomContact}</p>
+              <p>Email : {offre.emailContact}</p>
+              <p>Téléphone : {offre.telephoneContact}</p>
+              <p>Date dépôt : {offre.dateDepot}</p>
+              <p>CV proposés : {offre.cvProposes.length}</p>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {(visionCampus || visionGlobale) && (
+        <section
+          style={{
+            backgroundColor: "#f6f2ea",
+            padding: "15px",
+            borderRadius: "12px",
+            marginBottom: "20px",
+          }}
+        >
+          <h2>Suivi de mes équipes</h2>
+
+          <input
+            placeholder="Nom, prénom ou email du CRE"
+            value={nomRechercheEquipe}
+            onChange={(e) => setNomRechercheEquipe(e.target.value)}
+            style={{ padding: "10px", width: "280px", marginRight: "10px" }}
+          />
+
+          <button type="button" onClick={rechercherEquipe}>
+            Rechercher
+          </button>
+
+          {resultatEquipe && (
+            <div style={{ marginTop: "15px" }}>
+              <strong>{resultatEquipe.nom}</strong>
+              <p>{resultatEquipe.email}</p>
+              <p>Campus : {resultatEquipe.campus}</p>
+              <p>Total CV déposés : {resultatEquipe.total}</p>
+              <p>En recherche : {resultatEquipe.recherche}</p>
+              <p>Placés : {resultatEquipe.places}</p>
+            </div>
+          )}
+        </section>
+      )}
 
       {voirMesCV && (
         <section style={{ marginBottom: "30px" }}>
@@ -413,7 +634,7 @@ export default function CrePage() {
               <div
                 key={cv.indexGlobal}
                 style={{
-                  width: "260px",
+                  width: "300px",
                   border: "1px solid #ccc",
                   borderRadius: "12px",
                   padding: "12px",
@@ -434,6 +655,30 @@ export default function CrePage() {
                       : "En recherche d'alternance"}
                   </strong>
                 </p>
+
+                <h4>Présenté sur :</h4>
+
+                {(cv.presentations || []).length === 0 && (
+                  <p>Aucune présentation pour le moment.</p>
+                )}
+
+                {(cv.presentations || []).map((presentation) => (
+                  <div
+                    key={presentation.offreId}
+                    style={{
+                      backgroundColor: "#f6f2ea",
+                      padding: "10px",
+                      borderRadius: "8px",
+                      marginBottom: "8px",
+                    }}
+                  >
+                    <strong>{presentation.nomEntreprise}</strong>
+                    <p>{presentation.titrePoste}</p>
+                    <p>{presentation.ville}</p>
+                    <p>{presentation.typeContrat}</p>
+                    <p>{presentation.datePresentation}</p>
+                  </div>
+                ))}
 
                 <a href={cv.url} target="_blank">
                   Ouvrir le CV
@@ -470,15 +715,13 @@ export default function CrePage() {
         </section>
       )}
 
-      {(visionGlobale || visionCampus) && (
-        <button
-          type="button"
-          onClick={exporterCSV}
-          style={{ marginBottom: "20px" }}
-        >
-          Exporter les CV visibles
-        </button>
-      )}
+      <button
+        type="button"
+        onClick={exporterCSV}
+        style={{ marginBottom: "20px", marginRight: "10px" }}
+      >
+        Exporter les résultats
+      </button>
 
       {modeMonCampus && (
         <div
@@ -494,77 +737,77 @@ export default function CrePage() {
         </div>
       )}
 
-      {!modeMonCampus && (
-        <select
-          value={campus}
-          onChange={(e) => {
-            setCampus(e.target.value);
-            setMarque("");
-            setNiveau("");
-            setPromo("");
-          }}
-        >
-          <option value="">Choisir un campus</option>
+      <div style={{ display: "flex", gap: "15px", flexWrap: "wrap" }}>
+        {!modeMonCampus && (
+          <select
+            value={campus}
+            onChange={(e) => {
+              setCampus(e.target.value);
+              setMarque("");
+              setNiveau("");
+              setPromo("");
+            }}
+          >
+            <option value="">Choisir un campus</option>
 
-          {campusOptions.map((campusOption) => (
-            <option key={campusOption}>{campusOption}</option>
-          ))}
-        </select>
-      )}
+            {campusOptions.map((campusOption) => (
+              <option key={campusOption}>{campusOption}</option>
+            ))}
+          </select>
+        )}
 
-      {campus && (
-        <select
-          value={marque}
-          onChange={(e) => {
-            setMarque(e.target.value);
-            setNiveau("");
-            setPromo("");
-          }}
-          style={{ marginLeft: modeMonCampus ? "0px" : "15px" }}
-        >
-          <option value="">Choisir une marque</option>
+        {campus && (
+          <select
+            value={marque}
+            onChange={(e) => {
+              setMarque(e.target.value);
+              setNiveau("");
+              setPromo("");
+            }}
+          >
+            <option value="">Choisir une marque</option>
 
-          {marquesDisponibles.map((marqueOption) => (
-            <option key={marqueOption}>{marqueOption}</option>
-          ))}
-        </select>
-      )}
+            {marquesDisponibles.map((marqueOption) => (
+              <option key={marqueOption}>{marqueOption}</option>
+            ))}
+          </select>
+        )}
 
-      {marque && (
-        <select
-          value={niveau}
-          onChange={(e) => {
-            setNiveau(e.target.value);
-            setPromo("");
-          }}
-          style={{ marginLeft: "15px" }}
-        >
-          <option value="">Choisir un niveau</option>
+        {marque && (
+          <select
+            value={niveau}
+            onChange={(e) => {
+              setNiveau(e.target.value);
+              setPromo("");
+            }}
+          >
+            <option value="">Choisir un niveau</option>
 
-          {niveaux.map((niveauOption) => (
-            <option key={niveauOption}>{niveauOption}</option>
-          ))}
-        </select>
-      )}
+            {niveaux.map((niveauOption) => (
+              <option key={niveauOption}>{niveauOption}</option>
+            ))}
+          </select>
+        )}
 
-      {niveau && (
-        <select
-          value={promo}
-          onChange={(e) => setPromo(e.target.value)}
-          style={{ marginLeft: "15px" }}
-        >
-          <option value="">Choisir une filière</option>
+        {niveau && (
+          <select value={promo} onChange={(e) => setPromo(e.target.value)}>
+            <option value="">Choisir une filière</option>
 
-          {promosDisponibles.map((promoOption) => (
-            <option key={promoOption}>{promoOption}</option>
-          ))}
-        </select>
-      )}
+            {promosDisponibles.map((promoOption) => (
+              <option key={promoOption}>{promoOption}</option>
+            ))}
+          </select>
+        )}
+
+        <button type="button" onClick={() => rechercherCV()}>
+          Rechercher
+        </button>
+      </div>
 
       {promo && (
         <div style={{ marginTop: "30px" }}>
           <h2>
-            Dossier : {campus} / {marque} / {niveau} / {promo}
+            Déposer un CV : {campus} / {marque} / {niveau} / {promo}
           </h2>
 
           <div
@@ -579,20 +822,14 @@ export default function CrePage() {
               placeholder="NOM étudiant"
               value={nomEtudiant}
               onChange={(e) => setNomEtudiant(e.target.value)}
-              style={{
-                padding: "10px",
-                width: "220px",
-              }}
+              style={{ padding: "10px", width: "220px" }}
             />
 
             <input
               placeholder="Prénom étudiant"
               value={prenomEtudiant}
               onChange={(e) => setPrenomEtudiant(e.target.value)}
-              style={{
-                padding: "10px",
-                width: "220px",
-              }}
+              style={{ padding: "10px", width: "220px" }}
             />
           </div>
 
@@ -624,83 +861,84 @@ export default function CrePage() {
               </button>
             </div>
           )}
-
-          <h3 style={{ marginTop: "30px" }}>CV déposés</h3>
-
-          <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
-            {cvsDuDossier.map((cv) => (
-              <div
-                key={cv.indexGlobal}
-                style={{
-                  width: "260px",
-                  minHeight: "260px",
-                  border: "1px solid #ccc",
-                  borderRadius: "12px",
-                  padding: "12px",
-                  backgroundColor: "white",
-                }}
-              >
-                <strong>{cv.nom}</strong>
-
-                <p style={{ fontSize: "12px" }}>{cv.campus}</p>
-                <p style={{ fontSize: "12px" }}>{villeDepuisCampus(cv.campus)}</p>
-                <p style={{ fontSize: "12px" }}>{cv.marque}</p>
-                <p style={{ fontSize: "12px" }}>{cv.niveau}</p>
-                <p style={{ fontSize: "12px" }}>{cv.promo}</p>
-
-                <p style={{ fontSize: "12px" }}>
-                  Statut :{" "}
-                  <strong>
-                    {cv.statut === "place"
-                      ? "Placé"
-                      : "En recherche d'alternance"}
-                  </strong>
-                </p>
-
-                <p style={{ fontSize: "12px" }}>
-                  Déposé par : {cv.deposeParNom}
-                </p>
-
-                <p style={{ fontSize: "12px" }}>{cv.deposeParEmail}</p>
-
-                <a href={cv.url} target="_blank">
-                  Ouvrir le CV
-                </a>
-
-                {cv.deposeParEmail === utilisateur.email && (
-                  <>
-                    <br />
-
-                    <button
-                      type="button"
-                      onClick={() => basculerStatut(cv.indexGlobal)}
-                      style={{ marginTop: "10px" }}
-                    >
-                      {cv.statut === "place"
-                        ? "Remettre en recherche"
-                        : "Marquer comme placé"}
-                    </button>
-
-                    <br />
-
-                    <button
-                      type="button"
-                      onClick={() => supprimerCV(cv.indexGlobal)}
-                      style={{
-                        marginTop: "10px",
-                        backgroundColor: "red",
-                        color: "white",
-                      }}
-                    >
-                      Supprimer
-                    </button>
-                  </>
-                )}
-              </div>
-            ))}
-          </div>
         </div>
       )}
+
+      <h3 style={{ marginTop: "30px" }}>CV affichés : {listeAAfficher.length}</h3>
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
+        {listeAAfficher.map((cv) => (
+          <div
+            key={cv.indexGlobal}
+            style={{
+              width: "280px",
+              minHeight: "300px",
+              border: "1px solid #ccc",
+              borderRadius: "12px",
+              padding: "12px",
+              backgroundColor: "white",
+            }}
+          >
+            <strong>{cv.nom}</strong>
+
+            <p style={{ fontSize: "12px" }}>{cv.campus}</p>
+            <p style={{ fontSize: "12px" }}>{villeDepuisCampus(cv.campus)}</p>
+            <p style={{ fontSize: "12px" }}>{cv.marque}</p>
+            <p style={{ fontSize: "12px" }}>{cv.niveau}</p>
+            <p style={{ fontSize: "12px" }}>{cv.promo}</p>
+
+            <p style={{ fontSize: "12px" }}>
+              Statut :{" "}
+              <strong>
+                {cv.statut === "place"
+                  ? "Placé"
+                  : "En recherche d'alternance"}
+              </strong>
+            </p>
+
+            <p style={{ fontSize: "12px" }}>Déposé par : {cv.deposeParNom}</p>
+            <p style={{ fontSize: "12px" }}>{cv.deposeParEmail}</p>
+
+            <p style={{ fontSize: "12px" }}>
+              Présentations : {(cv.presentations || []).length}
+            </p>
+
+            <a href={cv.url} target="_blank">
+              Ouvrir le CV
+            </a>
+
+            {cv.deposeParEmail === utilisateur.email && (
+              <>
+                <br />
+
+                <button
+                  type="button"
+                  onClick={() => basculerStatut(cv.indexGlobal)}
+                  style={{ marginTop: "10px" }}
+                >
+                  {cv.statut === "place"
+                    ? "Remettre en recherche"
+                    : "Marquer comme placé"}
+                </button>
+
+                <br />
+
+                <button
+                  type="button"
+                  onClick={() => supprimerCV(cv.indexGlobal)}
+                  style={{
+                    marginTop: "10px",
+                    backgroundColor: "red",
+                    color: "white",
+                  }}
+                >
+                  Supprimer
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
     </main>
   );
 }
