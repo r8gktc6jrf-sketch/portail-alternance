@@ -61,13 +61,7 @@ const niveaux = ["Bac +1", "Bac +2", "Bac +3", "Bac +4", "Bac +5"];
 
 function estDireCo(role: string) {
   const r = role.toUpperCase();
-
-  return (
-    r === "DIRE CO" ||
-    r === "DIRECO" ||
-    r === "DIRECTION CO" ||
-    r === "DIRECTION COMMERCIALE"
-  );
+  return r === "DIRE CO" || r === "DIRECO" || r === "DIRECTION CO" || r === "DIRECTION COMMERCIALE";
 }
 
 function niveauEnNumero(niveau: string) {
@@ -157,14 +151,10 @@ export default function CrePage() {
 
   const [cvs, setCvs] = useState<CV[]>([]);
   const [offres, setOffres] = useState<Offre[]>([]);
-  const [resultatsRecherche, setResultatsRecherche] = useState<
-    (CV & { indexGlobal: number })[]
-  >([]);
+  const [resultatsRecherche, setResultatsRecherche] = useState<(CV & { indexGlobal: number })[]>([]);
 
   const [rechercheEffectuee, setRechercheEffectuee] = useState(false);
-  const [fichierSelectionne, setFichierSelectionne] = useState<File | null>(
-    null
-  );
+  const [fichierSelectionne, setFichierSelectionne] = useState<File | null>(null);
 
   const [voirMesCV, setVoirMesCV] = useState(false);
   const [voirToutesOffres, setVoirToutesOffres] = useState(false);
@@ -187,7 +177,7 @@ export default function CrePage() {
     const session = localStorage.getItem("session-interne");
 
     if (session) {
-      const user = JSON.parse(session);
+      const user = JSON.parse(session) as AccesInterne;
       setUtilisateur(user);
 
       if (modeUrl === "mon") {
@@ -223,10 +213,7 @@ export default function CrePage() {
   }
 
   function genererNomCV(fichier: File) {
-    const extension = fichier.name.includes(".")
-      ? "." + fichier.name.split(".").pop()
-      : "";
-
+    const extension = fichier.name.includes(".") ? "." + fichier.name.split(".").pop() : "";
     const numero = niveauEnNumero(niveau);
     const ville = villeDepuisCampus(campus);
 
@@ -239,18 +226,8 @@ export default function CrePage() {
       return;
     }
 
-    if (
-      !fichierSelectionne ||
-      !campus ||
-      !marque ||
-      !niveau ||
-      !promo ||
-      !nomEtudiant ||
-      !prenomEtudiant
-    ) {
-      alert(
-        "Renseigne le campus, la marque, le niveau, la filière, le nom, le prénom et le CV."
-      );
+    if (!fichierSelectionne || !campus || !marque || !niveau || !promo || !nomEtudiant || !prenomEtudiant) {
+      alert("Renseigne le campus, la marque, le niveau, la filière, le nom, le prénom et le CV.");
       return;
     }
 
@@ -277,21 +254,7 @@ export default function CrePage() {
     setPrenomEtudiant("");
   }
 
-function supprimerCV(indexGlobal: number) {
-  const cv = cvs[indexGlobal];
-
-  if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
-    alert("Tu peux supprimer uniquement les CV que tu as déposés.");
-    return;
-  }
-
-  const nouveauxCV = cvs.filter((_, index) => index !== indexGlobal);
-
-  sauvegarderCV(nouveauxCV);
-  rechercherCV(nouveauxCV);
- }
-
-  function rechercherCV(sourceCV = cvs) {
+  function rechercherCV(sourceCV: CV[] = cvs) {
     if (!utilisateur) return;
 
     const campusReference = retrouverCampusReference(utilisateur.campus);
@@ -303,13 +266,8 @@ function supprimerCV(indexGlobal: number) {
       .filter((cv) => {
         if (!cv.campus || cv.campus === "undefined") return false;
 
-        if (!visionGlobale && visionCampus && cv.campus !== campusReference) {
-          return false;
-        }
-
-        if (!visionGlobale && utilisateur.role === "CRE" && cv.campus !== campusReference) {
-          return false;
-        }
+        if (!visionGlobale && visionCampus && cv.campus !== campusReference) return false;
+        if (!visionGlobale && utilisateur.role === "CRE" && cv.campus !== campusReference) return false;
 
         if (campus && cv.campus !== campus) return false;
         if (marque && cv.marque !== marque) return false;
@@ -321,6 +279,41 @@ function supprimerCV(indexGlobal: number) {
 
     setResultatsRecherche(resultats);
     setRechercheEffectuee(true);
+  }
+
+  function supprimerCV(indexGlobal: number) {
+    const cv = cvs[indexGlobal];
+
+    if (!utilisateur || !cv || cv.deposeParEmail !== utilisateur.email) {
+      alert("Tu peux supprimer uniquement les CV que tu as déposés.");
+      return;
+    }
+
+    const nouveauxCV = cvs.filter((_, index) => index !== indexGlobal);
+
+    sauvegarderCV(nouveauxCV);
+    rechercherCV(nouveauxCV);
+  }
+
+  function basculerStatut(indexGlobal: number) {
+    const cv = cvs[indexGlobal];
+
+    if (!utilisateur || !cv || cv.deposeParEmail !== utilisateur.email) {
+      alert("Tu peux modifier uniquement les CV que tu as déposés.");
+      return;
+    }
+
+    const nouveauxCV: CV[] = cvs.map((cvItem, index) => {
+      if (index !== indexGlobal) return cvItem;
+
+      return {
+        ...cvItem,
+        statut: cvItem.statut === "place" ? "recherche" : "place",
+      };
+    });
+
+    sauvegarderCV(nouveauxCV);
+    rechercherCV(nouveauxCV);
   }
 
   function exporterCSV() {
@@ -414,24 +407,16 @@ function supprimerCV(indexGlobal: number) {
     .map((cv, indexGlobal) => ({ ...cv, indexGlobal }))
     .filter((cv) => cv.deposeParEmail === utilisateur.email);
 
-  const nombreCVCampusSelectionne = campus
-    ? cvs.filter((cv) => cv.campus === campus).length
-    : 0;
-
+  const nombreCVCampusSelectionne = campus ? cvs.filter((cv) => cv.campus === campus).length : 0;
   const nombreRechercheCampusSelectionne = campus
-    ? cvs.filter(
-        (cv) =>
-          cv.campus === campus && (cv.statut || "recherche") === "recherche"
-      ).length
+    ? cvs.filter((cv) => cv.campus === campus && (cv.statut || "recherche") === "recherche").length
     : 0;
-
   const nombrePlacesCampusSelectionne = campus
     ? cvs.filter((cv) => cv.campus === campus && cv.statut === "place").length
     : 0;
 
   const marquesDisponibles = campus ? getMarquesPourCampus(campus) : [];
-  const promosDisponibles =
-    campus && marque ? getPromosPourCampusEtMarque(campus, marque) : [];
+  const promosDisponibles = campus && marque ? getPromosPourCampusEtMarque(campus, marque) : [];
 
   function rechercherEquipe() {
     const texte = nomRechercheEquipe.trim().toLowerCase();
@@ -443,16 +428,13 @@ function supprimerCV(indexGlobal: number) {
 
     const personnesVisibles = accesInternes.filter((personne) => {
       if (personne.role !== "CRE") return false;
-
       if (visionGlobale) return true;
 
       return retrouverCampusReference(personne.campus) === campusReference;
     });
 
     const personne = personnesVisibles.find(
-      (p) =>
-        p.nom.toLowerCase().includes(texte) ||
-        p.email.toLowerCase().includes(texte)
+      (p) => p.nom.toLowerCase().includes(texte) || p.email.toLowerCase().includes(texte)
     );
 
     if (!personne) {
@@ -468,8 +450,7 @@ function supprimerCV(indexGlobal: number) {
       email: personne.email,
       campus: personne.campus,
       total: depots.length,
-      recherche: depots.filter((cv) => (cv.statut || "recherche") === "recherche")
-        .length,
+      recherche: depots.filter((cv) => (cv.statut || "recherche") === "recherche").length,
       places: depots.filter((cv) => cv.statut === "place").length,
     });
   }
@@ -484,14 +465,7 @@ function supprimerCV(indexGlobal: number) {
 
       <h1>Dossiers CV</h1>
 
-      <section
-        style={{
-          backgroundColor: "#f6f2ea",
-          padding: "15px",
-          borderRadius: "12px",
-          marginBottom: "20px",
-        }}
-      >
+      <section style={{ backgroundColor: "#f6f2ea", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
         <strong>👤 {utilisateur.nom}</strong>
         <p>{utilisateur.email}</p>
         <p>Rôle : {utilisateur.role}</p>
@@ -502,56 +476,32 @@ function supprimerCV(indexGlobal: number) {
         {campus && (
           <>
             <p>
-              Campus sélectionné : <strong>{campus}</strong> —{" "}
-              {nombreCVCampusSelectionne} CV déposé(s)
+              Campus sélectionné : <strong>{campus}</strong> — {nombreCVCampusSelectionne} CV déposé(s)
             </p>
             <p>En recherche d’alternance : {nombreRechercheCampusSelectionne}</p>
             <p>Placés : {nombrePlacesCampusSelectionne}</p>
           </>
         )}
 
-        <button
-          type="button"
-          onClick={() => setVoirMesCV(!voirMesCV)}
-          style={{ marginTop: "10px", marginRight: "10px" }}
-        >
+        <button type="button" onClick={() => setVoirMesCV(!voirMesCV)} style={{ marginTop: "10px", marginRight: "10px" }}>
           {voirMesCV ? "Masquer mes CV" : "Voir mes CV"}
         </button>
 
         {accesToutesOffres && (
-          <button
-            type="button"
-            onClick={() => setVoirToutesOffres(!voirToutesOffres)}
-            style={{ marginTop: "10px" }}
-          >
+          <button type="button" onClick={() => setVoirToutesOffres(!voirToutesOffres)} style={{ marginTop: "10px" }}>
             {voirToutesOffres ? "Masquer toutes les offres" : "Toutes les offres"}
           </button>
         )}
       </section>
 
       {accesToutesOffres && voirToutesOffres && (
-        <section
-          style={{
-            backgroundColor: "#f6f2ea",
-            padding: "15px",
-            borderRadius: "12px",
-            marginBottom: "20px",
-          }}
-        >
+        <section style={{ backgroundColor: "#f6f2ea", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
           <h2>Toutes les offres déposées</h2>
 
           {offres.length === 0 && <p>Aucune offre déposée pour le moment.</p>}
 
           {offres.map((offre) => (
-            <div
-              key={offre.id}
-              style={{
-                backgroundColor: "white",
-                padding: "15px",
-                borderRadius: "12px",
-                marginBottom: "12px",
-              }}
-            >
+            <div key={offre.id} style={{ backgroundColor: "white", padding: "15px", borderRadius: "12px", marginBottom: "12px" }}>
               <strong>{offre.nomEntreprise}</strong>
               <p>Poste : {offre.titrePoste}</p>
               <p>Ville : {offre.ville}</p>
@@ -569,14 +519,7 @@ function supprimerCV(indexGlobal: number) {
       )}
 
       {(visionCampus || visionGlobale) && (
-        <section
-          style={{
-            backgroundColor: "#f6f2ea",
-            padding: "15px",
-            borderRadius: "12px",
-            marginBottom: "20px",
-          }}
-        >
+        <section style={{ backgroundColor: "#f6f2ea", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
           <h2>Suivi de mes équipes</h2>
 
           <input
@@ -611,16 +554,7 @@ function supprimerCV(indexGlobal: number) {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
             {mesCV.map((cv) => (
-              <div
-                key={cv.indexGlobal}
-                style={{
-                  width: "300px",
-                  border: "1px solid #ccc",
-                  borderRadius: "12px",
-                  padding: "12px",
-                  backgroundColor: "white",
-                }}
-              >
+              <div key={cv.indexGlobal} style={{ width: "300px", border: "1px solid #ccc", borderRadius: "12px", padding: "12px", backgroundColor: "white" }}>
                 <strong>{cv.nom}</strong>
                 <p>{cv.campus}</p>
                 <p>{villeDepuisCampus(cv.campus)}</p>
@@ -628,30 +562,15 @@ function supprimerCV(indexGlobal: number) {
                 <p>{cv.niveau}</p>
                 <p>{cv.promo}</p>
                 <p>
-                  Statut :{" "}
-                  <strong>
-                    {cv.statut === "place"
-                      ? "Placé"
-                      : "En recherche d'alternance"}
-                  </strong>
+                  Statut : <strong>{cv.statut === "place" ? "Placé" : "En recherche d'alternance"}</strong>
                 </p>
 
                 <h4>Présenté sur :</h4>
 
-                {(cv.presentations || []).length === 0 && (
-                  <p>Aucune présentation pour le moment.</p>
-                )}
+                {(cv.presentations || []).length === 0 && <p>Aucune présentation pour le moment.</p>}
 
                 {(cv.presentations || []).map((presentation) => (
-                  <div
-                    key={presentation.offreId}
-                    style={{
-                      backgroundColor: "#f6f2ea",
-                      padding: "10px",
-                      borderRadius: "8px",
-                      marginBottom: "8px",
-                    }}
-                  >
+                  <div key={presentation.offreId} style={{ backgroundColor: "#f6f2ea", padding: "10px", borderRadius: "8px", marginBottom: "8px" }}>
                     <strong>{presentation.nomEntreprise}</strong>
                     <p>{presentation.titrePoste}</p>
                     <p>{presentation.ville}</p>
@@ -666,27 +585,13 @@ function supprimerCV(indexGlobal: number) {
 
                 <br />
 
-                <button
-                  type="button"
-                  onClick={() => basculerStatut(cv.indexGlobal)}
-                  style={{ marginTop: "10px" }}
-                >
-                  {cv.statut === "place"
-                    ? "Remettre en recherche"
-                    : "Marquer comme placé"}
+                <button type="button" onClick={() => basculerStatut(cv.indexGlobal)} style={{ marginTop: "10px" }}>
+                  {cv.statut === "place" ? "Remettre en recherche" : "Marquer comme placé"}
                 </button>
 
                 <br />
 
-                <button
-                  type="button"
-                  onClick={() => supprimerCV(cv.indexGlobal)}
-                  style={{
-                    marginTop: "10px",
-                    backgroundColor: "red",
-                    color: "white",
-                  }}
-                >
+                <button type="button" onClick={() => supprimerCV(cv.indexGlobal)} style={{ marginTop: "10px", backgroundColor: "red", color: "white" }}>
                   Supprimer
                 </button>
               </div>
@@ -695,24 +600,12 @@ function supprimerCV(indexGlobal: number) {
         </section>
       )}
 
-      <button
-        type="button"
-        onClick={exporterCSV}
-        style={{ marginBottom: "20px", marginRight: "10px" }}
-      >
+      <button type="button" onClick={exporterCSV} style={{ marginBottom: "20px", marginRight: "10px" }}>
         Exporter les résultats
       </button>
 
       {modeMonCampus && (
-        <div
-          style={{
-            backgroundColor: "#dbeafe",
-            padding: "15px",
-            borderRadius: "12px",
-            marginBottom: "20px",
-            maxWidth: "600px",
-          }}
-        >
+        <div style={{ backgroundColor: "#dbeafe", padding: "15px", borderRadius: "12px", marginBottom: "20px", maxWidth: "600px" }}>
           <strong>Mon campus sélectionné :</strong> {campus}
         </div>
       )}
@@ -790,27 +683,10 @@ function supprimerCV(indexGlobal: number) {
             Déposer un CV : {campus} / {marque} / {niveau} / {promo}
           </h2>
 
-          <div
-            style={{
-              display: "flex",
-              gap: "15px",
-              flexWrap: "wrap",
-              marginBottom: "15px",
-            }}
-          >
-            <input
-              placeholder="NOM étudiant"
-              value={nomEtudiant}
-              onChange={(e) => setNomEtudiant(e.target.value)}
-              style={{ padding: "10px", width: "220px" }}
-            />
+          <div style={{ display: "flex", gap: "15px", flexWrap: "wrap", marginBottom: "15px" }}>
+            <input placeholder="NOM étudiant" value={nomEtudiant} onChange={(e) => setNomEtudiant(e.target.value)} style={{ padding: "10px", width: "220px" }} />
 
-            <input
-              placeholder="Prénom étudiant"
-              value={prenomEtudiant}
-              onChange={(e) => setPrenomEtudiant(e.target.value)}
-              style={{ padding: "10px", width: "220px" }}
-            />
+            <input placeholder="Prénom étudiant" value={prenomEtudiant} onChange={(e) => setPrenomEtudiant(e.target.value)} style={{ padding: "10px", width: "220px" }} />
           </div>
 
           <input
@@ -828,12 +704,7 @@ function supprimerCV(indexGlobal: number) {
           {fichierSelectionne && (
             <div style={{ marginTop: "15px" }}>
               <p>
-                Nom généré :{" "}
-                <strong>
-                  {nomEtudiant && prenomEtudiant
-                    ? genererNomCV(fichierSelectionne)
-                    : "Renseigne NOM et Prénom"}
-                </strong>
+                Nom généré : <strong>{nomEtudiant && prenomEtudiant ? genererNomCV(fichierSelectionne) : "Renseigne NOM et Prénom"}</strong>
               </p>
 
               <button type="button" onClick={enregistrerCV}>
@@ -848,17 +719,7 @@ function supprimerCV(indexGlobal: number) {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
         {listeAAfficher.map((cv) => (
-          <div
-            key={cv.indexGlobal}
-            style={{
-              width: "280px",
-              minHeight: "300px",
-              border: "1px solid #ccc",
-              borderRadius: "12px",
-              padding: "12px",
-              backgroundColor: "white",
-            }}
-          >
+          <div key={cv.indexGlobal} style={{ width: "280px", minHeight: "300px", border: "1px solid #ccc", borderRadius: "12px", padding: "12px", backgroundColor: "white" }}>
             <strong>{cv.nom}</strong>
 
             <p style={{ fontSize: "12px" }}>{cv.campus}</p>
@@ -868,20 +729,13 @@ function supprimerCV(indexGlobal: number) {
             <p style={{ fontSize: "12px" }}>{cv.promo}</p>
 
             <p style={{ fontSize: "12px" }}>
-              Statut :{" "}
-              <strong>
-                {cv.statut === "place"
-                  ? "Placé"
-                  : "En recherche d'alternance"}
-              </strong>
+              Statut : <strong>{cv.statut === "place" ? "Placé" : "En recherche d'alternance"}</strong>
             </p>
 
             <p style={{ fontSize: "12px" }}>Déposé par : {cv.deposeParNom}</p>
             <p style={{ fontSize: "12px" }}>{cv.deposeParEmail}</p>
 
-            <p style={{ fontSize: "12px" }}>
-              Présentations : {(cv.presentations || []).length}
-            </p>
+            <p style={{ fontSize: "12px" }}>Présentations : {(cv.presentations || []).length}</p>
 
             <a href={cv.url} target="_blank">
               Ouvrir le CV
@@ -891,27 +745,13 @@ function supprimerCV(indexGlobal: number) {
               <>
                 <br />
 
-                <button
-                  type="button"
-                  onClick={() => basculerStatut(cv.indexGlobal)}
-                  style={{ marginTop: "10px" }}
-                >
-                  {cv.statut === "place"
-                    ? "Remettre en recherche"
-                    : "Marquer comme placé"}
+                <button type="button" onClick={() => basculerStatut(cv.indexGlobal)} style={{ marginTop: "10px" }}>
+                  {cv.statut === "place" ? "Remettre en recherche" : "Marquer comme placé"}
                 </button>
 
                 <br />
 
-                <button
-                  type="button"
-                  onClick={() => supprimerCV(cv.indexGlobal)}
-                  style={{
-                    marginTop: "10px",
-                    backgroundColor: "red",
-                    color: "white",
-                  }}
-                >
+                <button type="button" onClick={() => supprimerCV(cv.indexGlobal)} style={{ marginTop: "10px", backgroundColor: "red", color: "white" }}>
                   Supprimer
                 </button>
               </>
