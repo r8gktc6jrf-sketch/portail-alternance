@@ -277,39 +277,26 @@ export default function CrePage() {
     setPrenomEtudiant("");
   }
 
-  function supprimerCV(indexGlobal: number) {
-    const cv = cvs[indexGlobal];
+function basculerStatut(indexGlobal: number) {
+  const cv = cvs[indexGlobal];
 
-    if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
-      alert("Tu peux supprimer uniquement les CV que tu as déposés.");
-      return;
-    }
-
-    const nouveauxCV = cvs.filter((_, index) => index !== indexGlobal);
-    sauvegarderCV(nouveauxCV);
-    rechercherCV(nouveauxCV);
+  if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
+    alert("Tu peux modifier uniquement les CV que tu as déposés.");
+    return;
   }
 
-  function basculerStatut(indexGlobal: number) {
-    const cv = cvs[indexGlobal];
+  const nouveauxCV: CV[] = cvs.map((cvItem, index) => {
+    if (index !== indexGlobal) return cvItem;
 
-    if (!utilisateur || cv.deposeParEmail !== utilisateur.email) {
-      alert("Tu peux modifier uniquement les CV que tu as déposés.");
-      return;
-    }
+    return {
+      ...cvItem,
+      statut: cvItem.statut === "place" ? "recherche" : "place",
+    };
+  });
 
-    const nouveauxCV = cvs.map((cvItem, index) => {
-      if (index !== indexGlobal) return cvItem;
-
-      return {
-        ...cvItem,
-        statut: cvItem.statut === "place" ? "recherche" : "place",
-      };
-    });
-
-    sauvegarderCV(nouveauxCV);
-    rechercherCV(nouveauxCV);
-  }
+  sauvegarderCV(nouveauxCV);
+  rechercherCV(nouveauxCV);
+}
 
   function rechercherCV(sourceCV = cvs) {
     if (!utilisateur) return;

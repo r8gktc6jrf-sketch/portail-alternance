@@ -61,21 +61,10 @@ export default function Home() {
           animation: fadeUp 0.9s ease forwards;
         }
 
-        .delay-1 {
-          animation-delay: 0.15s;
-        }
-
-        .delay-2 {
-          animation-delay: 0.3s;
-        }
-
-        .delay-3 {
-          animation-delay: 0.45s;
-        }
-
-        .delay-4 {
-          animation-delay: 0.6s;
-        }
+        .delay-1 { animation-delay: 0.15s; }
+        .delay-2 { animation-delay: 0.3s; }
+        .delay-3 { animation-delay: 0.45s; }
+        .delay-4 { animation-delay: 0.6s; }
 
         @keyframes fadeUp {
           to {
@@ -89,16 +78,12 @@ export default function Home() {
         }
 
         @keyframes floatLogo {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-8px);
-          }
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
         }
 
         .card {
-          transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
 
         .card:hover {
@@ -107,7 +92,7 @@ export default function Home() {
         }
 
         .button {
-          transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .button:hover {
@@ -125,12 +110,40 @@ export default function Home() {
         }
 
         .value-card {
-          transition: transform 0.25s ease, background-color 0.25s ease;
+          position: relative;
+          overflow: hidden;
+          transform-style: preserve-3d;
+          transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+        }
+
+        .value-card::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          background: radial-gradient(circle at top, rgba(255,255,255,0.18), transparent 45%);
+          opacity: 0;
+          transition: opacity 0.3s ease;
         }
 
         .value-card:hover {
-          transform: translateY(-8px);
+          transform: translateY(-12px) scale(1.04) rotateX(4deg);
           background-color: #3a3a3a;
+          box-shadow: 0 24px 45px rgba(0,0,0,0.3);
+        }
+
+        .value-card:hover::after {
+          opacity: 1;
+        }
+
+        .value-card h3 {
+          position: relative;
+          z-index: 1;
+          transition: transform 0.25s ease, letter-spacing 0.25s ease;
+        }
+
+        .value-card:hover h3 {
+          transform: translateY(-6px);
+          letter-spacing: 1px;
         }
 
         input::placeholder {
@@ -384,7 +397,6 @@ export default function Home() {
                   padding: "14px",
                   marginTop: "12px",
                   marginBottom: "14px",
-                  boxSizing: "border-box",
                   borderRadius: "12px",
                   border: "1px solid #555",
                   backgroundColor: "#242424",
@@ -548,6 +560,7 @@ export default function Home() {
                 padding: "42px 20px",
                 borderTop: `8px solid ${couleur}`,
                 minHeight: "150px",
+                cursor: "pointer",
               }}
             >
               <h3
