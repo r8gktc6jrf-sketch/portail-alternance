@@ -180,14 +180,15 @@ export const promosParCampusMarque: Record<string, string[]> = {
   "Campus IDRI Paris|||IDRI": ["IMB", "LPS", "MAQ", "MED", "VTM", "CI3", "CIM", "CI9", "PPC"],
   "Campus ISA Paris|||ISA": ["IMG", "MON", "SON", "PRO", "MAU", "IEM", "PRD", "MUS", "PRA"],
   "Campus ISFJ Paris|||ISFJ": ["JOU", "IFN", "INS", "JRI"],
-  "Campus MBA PPA Paris|||MBA PPA": ["PAC", "PGP", "PMD", "PDA", "ASI", "PBD", "PIB", "PMA", "PSC", "PFI", "PRH", "PRG", "PTN", "MPC", "PTH", "PML", "PBM", "PCE"],
-  "Campus MBA PPA Sport Paris|||MBA PPA SPORT": ["MBS"],
   "Campus MODART Paris|||MODART": ["DAM", "COM", "MAM", "SMO", "CMP", "MMD", "SMP", "IAL", "DFD", "MBA"],
   "Campus Maestris BTS Paris|||MAESTRIS": ["COM", "EDT", "WPC"],
   "Campus Métavers|||2I ACADEMY": ["DWM", "TSR", "ASD", "AIS", "CDA", "TLO", "CYB"],
 
   "Campus PPA Paris|||PPA": ["COM", "CAC", "FIN", "GPA", "MKT", "RHM", "ASC", "IBS", "MGC", "BDV", "CMT", "PAT", "IAS", "MDI", "RGP", "MDA", "SCN", "BUS", "BQE", "BMG", "CMA", "CRM", "PUB", "FIM", "HSP", "DTN", "DIS", "SAN", "DIG", "LUX", "MED", "EVE"],
-  "Campus PPA SPORT Paris|||PPA Sport": ["BDS", "MCS"],
+  "Campus PPA Paris|||PPA Sport": ["MCS", "BDS"],
+  "Campus PPA Paris|||MBA PPA": ["PAC", "PGP", "PMD", "PDA", "ASI", "PBD", "PIB", "PMA", "PSC", "PFI", "PRH", "PRG", "PTN", "MPC", "PTH", "PML", "PBM", "PCE"]
+
+  ,
 
   "Campus SKOLAE Le Havre|||2I ACADEMY": ["DWM", "TSR", "ASD", "AIS", "CDA", "TLO"],
   "Campus SKOLAE Le Havre|||ESGI": ["TCN", "ALG", "SEI", "IWB", "SRC"],
