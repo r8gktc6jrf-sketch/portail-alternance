@@ -415,7 +415,12 @@ export default function CrePage() {
     ? cvs.filter((cv) => cv.campus === campus && cv.statut === "place").length
     : 0;
 
-  const marquesDisponibles = campus ? getMarquesPourCampus(campus) : [];
+ const marquesDisponibles =
+  campus === "Campus PPA Paris"
+    ? ["PPA", "PPA Sport", "MBA PPA", ]
+    : campus
+    ? getMarquesPourCampus(campus)
+    : [];
   const promosDisponibles = campus && marque ? getPromosPourCampusEtMarque(campus, marque) : [];
 
   function rechercherEquipe() {
