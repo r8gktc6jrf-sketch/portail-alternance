@@ -378,7 +378,7 @@ export default function CrePage() {
 
   if (!utilisateur) {
     return (
-      <main style={{ padding: "40px", fontFamily: "Arial", color: "black" }}>
+      <main className="page">
         <Link href="/">
           <button>🏠 Accueil</button>
         </Link>
@@ -463,14 +463,14 @@ export default function CrePage() {
   const listeAAfficher = rechercheEffectuee ? resultatsRecherche : cvsVisibles;
 
   return (
-    <main style={{ padding: "40px", fontFamily: "Arial", color: "black" }}>
+    <main className="page">
       <Link href="/">
         <button style={{ marginBottom: "25px" }}>🏠 Accueil</button>
       </Link>
 
       <h1>Dossiers CV</h1>
 
-      <section style={{ backgroundColor: "#f6f2ea", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
+      <section style={{ backgroundColor: "#333", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
         <strong>👤 {utilisateur.nom}</strong>
         <p>{utilisateur.email}</p>
         <p>Rôle : {utilisateur.role}</p>
@@ -500,13 +500,13 @@ export default function CrePage() {
       </section>
 
       {accesToutesOffres && voirToutesOffres && (
-        <section style={{ backgroundColor: "#f6f2ea", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
+        <section style={{ backgroundColor: "#333", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
           <h2>Toutes les offres déposées</h2>
 
           {offres.length === 0 && <p>Aucune offre déposée pour le moment.</p>}
 
           {offres.map((offre) => (
-            <div key={offre.id} style={{ backgroundColor: "white", padding: "15px", borderRadius: "12px", marginBottom: "12px" }}>
+            <div key={offre.id} style={{ backgroundColor: "#333", padding: "15px", borderRadius: "12px", marginBottom: "12px" }}>
               <strong>{offre.nomEntreprise}</strong>
               <p>Poste : {offre.titrePoste}</p>
               <p>Ville : {offre.ville}</p>
@@ -524,7 +524,7 @@ export default function CrePage() {
       )}
 
       {(visionCampus || visionGlobale) && (
-        <section style={{ backgroundColor: "#f6f2ea", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
+        <section style={{ backgroundColor: "#333", padding: "15px", borderRadius: "12px", marginBottom: "20px" }}>
           <h2>Suivi de mes équipes</h2>
 
           <input
@@ -559,7 +559,7 @@ export default function CrePage() {
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
             {mesCV.map((cv) => (
-              <div key={cv.indexGlobal} style={{ width: "300px", border: "1px solid #ccc", borderRadius: "12px", padding: "12px", backgroundColor: "white" }}>
+              <div key={cv.indexGlobal} style={{ width: "300px", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px", padding: "12px", backgroundColor: "#333" }}>
                 <strong>{cv.nom}</strong>
                 <p>{cv.campus}</p>
                 <p>{villeDepuisCampus(cv.campus)}</p>
@@ -575,7 +575,7 @@ export default function CrePage() {
                 {(cv.presentations || []).length === 0 && <p>Aucune présentation pour le moment.</p>}
 
                 {(cv.presentations || []).map((presentation) => (
-                  <div key={presentation.offreId} style={{ backgroundColor: "#f6f2ea", padding: "10px", borderRadius: "8px", marginBottom: "8px" }}>
+                  <div key={presentation.offreId} style={{ backgroundColor: "#333", padding: "10px", borderRadius: "8px", marginBottom: "8px" }}>
                     <strong>{presentation.nomEntreprise}</strong>
                     <p>{presentation.titrePoste}</p>
                     <p>{presentation.ville}</p>
@@ -596,7 +596,7 @@ export default function CrePage() {
 
                 <br />
 
-                <button type="button" onClick={() => supprimerCV(cv.indexGlobal)} style={{ marginTop: "10px", backgroundColor: "red", color: "white" }}>
+                <button type="button" onClick={() => supprimerCV(cv.indexGlobal)} style={{ marginTop: "10px", backgroundColor: "#ff8a8a", color: "white" }}>
                   Supprimer
                 </button>
               </div>
@@ -610,7 +610,7 @@ export default function CrePage() {
       </button>
 
       {modeMonCampus && (
-        <div style={{ backgroundColor: "#dbeafe", padding: "15px", borderRadius: "12px", marginBottom: "20px", maxWidth: "600px" }}>
+        <div style={{ backgroundColor: "#333", padding: "15px", borderRadius: "12px", marginBottom: "20px", maxWidth: "600px" }}>
           <strong>Mon campus sélectionné :</strong> {campus}
         </div>
       )}
@@ -724,7 +724,7 @@ export default function CrePage() {
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "15px" }}>
         {listeAAfficher.map((cv) => (
-          <div key={cv.indexGlobal} style={{ width: "280px", minHeight: "300px", border: "1px solid #ccc", borderRadius: "12px", padding: "12px", backgroundColor: "white" }}>
+          <div key={cv.indexGlobal} style={{ width: "280px", minHeight: "300px", border: "1px solid rgba(255,255,255,0.12)", borderRadius: "12px", padding: "12px", backgroundColor: "#333" }}>
             <strong>{cv.nom}</strong>
 
             <p style={{ fontSize: "12px" }}>{cv.campus}</p>
@@ -756,7 +756,7 @@ export default function CrePage() {
 
                 <br />
 
-                <button type="button" onClick={() => supprimerCV(cv.indexGlobal)} style={{ marginTop: "10px", backgroundColor: "red", color: "white" }}>
+                <button type="button" onClick={() => supprimerCV(cv.indexGlobal)} style={{ marginTop: "10px", backgroundColor: "#ff8a8a", color: "white" }}>
                   Supprimer
                 </button>
               </>
