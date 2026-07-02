@@ -80,6 +80,33 @@ function estDireCo(role: string) {
   );
 }
 
+function roleNormalise(role: string) {
+  return role
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function estCRE(role: string) {
+  return roleNormalise(role) === "CRE";
+}
+
+function estRRE(role: string) {
+  return roleNormalise(role) === "RRE";
+}
+
+function estDRE(role: string) {
+  return roleNormalise(role) === "DRE";
+}
+
+function rolesEquipeVisibles(role: string) {
+  if (estDireCo(role)) return ["CRE", "RRE", "DRE"];
+  if (estDRE(role)) return ["CRE", "RRE"];
+  if (estRRE(role)) return ["CRE"];
+
+  return [];
+}
+
 function niveauEnNumero(niveau: string) {
   return niveau.replace("Bac +", "");
 }
@@ -181,6 +208,7 @@ export default function CrePage() {
   const [resultatEquipe, setResultatEquipe] = useState<{
     nom: string;
     email: string;
+    role: string;
     campus: string;
     total: number;
     recherche: number;
@@ -431,8 +459,9 @@ export default function CrePage() {
   }
 
   const visionGlobale = peutVoirTousLesCampus(utilisateur.role);
-  const visionCampus = utilisateur.role === "RRE";
+  const visionCampus = estRRE(utilisateur.role);
   const accesToutesOffres = estDireCo(utilisateur.role);
+  const accesSuiviEquipe = rolesEquipeVisibles(utilisateur.role).length > 0;
   const campusReference = retrouverCampusReference(utilisateur.campus);
   const modeMonCampus = mode === "mon";
 
@@ -475,9 +504,13 @@ export default function CrePage() {
       return;
     }
 
+    const rolesAutorises = rolesEquipeVisibles(utilisateur.role);
+
     const personnesVisibles = accesInternes.filter((personne) => {
-      if (personne.role !== "CRE") return false;
-      if (visionGlobale) return true;
+      const rolePersonne = roleNormalise(personne.role);
+
+      if (!rolesAutorises.includes(rolePersonne)) return false;
+      if (estDireCo(utilisateur.role)) return true;
 
       return retrouverCampusReference(personne.campus) === campusReference;
     });
@@ -485,12 +518,13 @@ export default function CrePage() {
     const personne = personnesVisibles.find(
       (p) =>
         p.nom.toLowerCase().includes(texte) ||
-        p.email.toLowerCase().includes(texte)
+        p.email.toLowerCase().includes(texte) ||
+        p.role.toLowerCase().includes(texte)
     );
 
     if (!personne) {
       setResultatEquipe(null);
-      alert("Aucun CRE trouvé.");
+      alert("Aucun collaborateur trouvé dans votre périmètre.");
       return;
     }
 
@@ -499,6 +533,7 @@ export default function CrePage() {
     setResultatEquipe({
       nom: personne.nom,
       email: personne.email,
+      role: personne.role,
       campus: personne.campus,
       total: depots.length,
       recherche: depots.filter((cv) => (cv.statut || "recherche") === "recherche")
@@ -614,13 +649,13 @@ export default function CrePage() {
           </section>
         )}
 
-        {(visionCampus || visionGlobale) && (
+        {accesSuiviEquipe && (
           <section style={{ ...cardStyle, borderTop: `8px solid ${pastel.purple}` }}>
             <h2 style={sectionTitleStyle}>Suivi de mes équipes</h2>
 
             <div style={rowStyle}>
               <input
-                placeholder="Nom, prénom ou email du CRE"
+                placeholder="Nom, prénom, email ou rôle"
                 value={nomRechercheEquipe}
                 onChange={(e) => setNomRechercheEquipe(e.target.value)}
                 style={inputStyle}
@@ -635,6 +670,7 @@ export default function CrePage() {
               <div style={{ ...miniCardStyle, borderTop: `6px solid ${pastel.purple}`, marginTop: "18px" }}>
                 <strong>{resultatEquipe.nom}</strong>
                 <p>{resultatEquipe.email}</p>
+                <p>Rôle : {resultatEquipe.role}</p>
                 <p>Campus : {resultatEquipe.campus}</p>
                 <p>Total CV déposés : {resultatEquipe.total}</p>
                 <p>En recherche : {resultatEquipe.recherche}</p>
@@ -1100,7 +1136,15 @@ const animations = `
   * { box-sizing: border-box; }
   body { margin: 0; background: #242424; }
   p { color: #e8e8e8; }
-  select option { color: black; }
+  select, select option {
+    background: #242424;
+    color: white;
+  }
+  select option:checked,
+  select option:hover {
+    background: #333333;
+    color: white;
+  }
 
   .background-animation {
     position: fixed;
