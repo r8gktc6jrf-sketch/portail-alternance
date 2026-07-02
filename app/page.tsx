@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Handshake, Lightbulb, Puzzle, Users } from "lucide-react";
 import { AccesInterne, trouverAcces } from "./data/access";
 
 export default function Home() {
@@ -618,28 +619,63 @@ export default function Home() {
             }}
           >
             {[
-              ["Engagement", "#b7e4ff"],
-              ["Innovation", "#d9b8ff"],
-              ["Agilité", "#f3c7b0"],
-              ["Collectif", "#a7e8c5"],
-            ].map(([valeur, couleur], index) => (
+              {
+                valeur: "Engagement",
+                couleur: "#b7e4ff",
+                icon: <Handshake size={56} strokeWidth={1.8} />,
+              },
+              {
+                valeur: "Innovation",
+                couleur: "#d9b8ff",
+                icon: <Lightbulb size={56} strokeWidth={1.8} />,
+              },
+              {
+                valeur: "Agilité",
+                couleur: "#f3c7b0",
+                icon: <Puzzle size={56} strokeWidth={1.8} />,
+              },
+              {
+                valeur: "Collectif",
+                couleur: "#a7e8c5",
+                icon: <Users size={56} strokeWidth={1.8} />,
+              },
+            ].map(({ valeur, couleur, icon }, index) => (
               <div
                 key={valeur}
                 className={`value-card fade-up delay-${Math.min(index + 1, 4)}`}
                 style={{
                   backgroundColor: "#333",
                   borderRadius: "18px",
-                  padding: "42px 20px",
+                  padding: "34px 20px 30px",
                   borderTop: `8px solid ${couleur}`,
-                  minHeight: "150px",
+                  minHeight: "174px",
                   cursor: "pointer",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "22px",
                 }}
               >
+                <div
+                  style={{
+                    color: couleur,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    position: "relative",
+                    zIndex: 1,
+                  }}
+                >
+                  {icon}
+                </div>
+
                 <h3
                   style={{
                     textTransform: "uppercase",
                     fontSize: "15px",
-                    marginTop: "35px",
+                    margin: 0,
+                    fontWeight: 900,
                   }}
                 >
                   {valeur}
