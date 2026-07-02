@@ -497,6 +497,11 @@ export default function CrePage() {
     campus && marque ? getPromosPourCampusEtMarque(campus, marque) : [];
 
   function rechercherEquipe() {
+    if (!utilisateur) {
+      setResultatEquipe(null);
+      return;
+    }
+
     const texte = nomRechercheEquipe.trim().toLowerCase();
 
     if (!texte) {
