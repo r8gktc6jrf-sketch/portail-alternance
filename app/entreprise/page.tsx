@@ -39,6 +39,7 @@ type Offre = {
   typeContrat: string;
   dureeContrat: string;
   competences: string[];
+  nombrePostes: number;
   nombreCV: number;
   fichePoste?: string;
   dateDepot: string;
@@ -170,6 +171,7 @@ export default function EntreprisePage() {
   const [dureeContrat, setDureeContrat] = useState("");
 
   const [competences, setCompetences] = useState<string[]>([]);
+  const [nombrePostes, setNombrePostes] = useState(1);
   const [nombreCV, setNombreCV] = useState(5);
 
   const [resultats, setResultats] = useState<(CV & { score?: number })[]>([]);
@@ -221,6 +223,7 @@ export default function EntreprisePage() {
       typeContrat,
       dureeContrat,
       competences,
+      nombrePostes,
       nombreCV,
       fichePoste: fichePoste?.name,
       dateDepot: new Date().toLocaleString("fr-FR"),
@@ -322,6 +325,7 @@ export default function EntreprisePage() {
       !typeContrat ||
       !dureeContrat ||
       competences.length === 0 ||
+      nombrePostes < 1 ||
       nombreCV < 1
     ) {
       setResultats([]);
@@ -440,6 +444,13 @@ export default function EntreprisePage() {
         textarea { height: auto; padding: 14px; resize: vertical; }
         input::placeholder, textarea::placeholder { color: #bdbdbd; }
         label { color: #e8e8e8; font-weight: 700; display: block; margin-bottom: 8px; }
+        .field small {
+          display: block;
+          margin-top: 7px;
+          color: #cfcfcf;
+          font-size: 12px;
+          line-height: 1.35;
+        }
         .grid-form {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -545,8 +556,32 @@ export default function EntreprisePage() {
               <option>Autre</option>
             </select>
 
-            <input type="number" min="1" value={nombreCV} onChange={(e) => setNombreCV(Number(e.target.value))} placeholder="Nombre de CV souhaités" />
-            <div />
+            <div className="field">
+              <label htmlFor="nombrePostes">Nombre de postes à pourvoir</label>
+              <input
+                id="nombrePostes"
+                type="number"
+                min="1"
+                value={nombrePostes}
+                onChange={(e) => setNombrePostes(Number(e.target.value))}
+                placeholder="Ex. 1"
+              />
+              <small>Nombre d’alternants ou de stagiaires recherchés sur cette offre.</small>
+            </div>
+
+            <div className="field">
+              <label htmlFor="nombreCV">Nombre de CV souhaités</label>
+              <input
+                id="nombreCV"
+                type="number"
+                min="1"
+                value={nombreCV}
+                onChange={(e) => setNombreCV(Number(e.target.value))}
+                placeholder="Ex. 5"
+              />
+              <small>Nombre maximum de profils à proposer à l’entreprise.</small>
+            </div>
+
             <div />
           </div>
 
