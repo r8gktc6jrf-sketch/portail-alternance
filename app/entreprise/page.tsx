@@ -29,7 +29,9 @@ type CV = {
 type Offre = {
   id: string;
   nomEntreprise: string;
+  civiliteContact: string;
   nomContact: string;
+  prenomContact: string;
   emailContact: string;
   telephoneContact: string;
   titrePoste: string;
@@ -65,7 +67,7 @@ const villes = [
   "TOULOUSE",
   "GRENOBLE",
   "REIMS",
-];
+].sort((a, b) => a.localeCompare(b, "fr", { sensitivity: "base" }));
 
 const competencesDisponibles = [
   "Vente",
@@ -159,7 +161,9 @@ export default function EntreprisePage() {
   const [cvs, setCvs] = useState<CV[]>([]);
 
   const [nomEntreprise, setNomEntreprise] = useState("");
+  const [civiliteContact, setCiviliteContact] = useState("");
   const [nomContact, setNomContact] = useState("");
+  const [prenomContact, setPrenomContact] = useState("");
   const [emailContact, setEmailContact] = useState("");
   const [telephoneContact, setTelephoneContact] = useState("");
   const [titrePoste, setTitrePoste] = useState("");
@@ -213,7 +217,9 @@ export default function EntreprisePage() {
     const nouvelleOffre: Offre = {
       id: offreId,
       nomEntreprise,
+      civiliteContact,
       nomContact,
+      prenomContact,
       emailContact,
       telephoneContact,
       titrePoste,
@@ -315,7 +321,9 @@ export default function EntreprisePage() {
 
     if (
       !nomEntreprise ||
+      !civiliteContact ||
       !nomContact ||
+      !prenomContact ||
       !emailContact ||
       !telephoneContact ||
       !titrePoste ||
@@ -444,6 +452,11 @@ export default function EntreprisePage() {
         textarea { height: auto; padding: 14px; resize: vertical; }
         input::placeholder, textarea::placeholder { color: #bdbdbd; }
         label { color: #e8e8e8; font-weight: 700; display: block; margin-bottom: 8px; }
+        .field {
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
         .field small {
           display: block;
           margin-top: 7px;
@@ -453,9 +466,10 @@ export default function EntreprisePage() {
         }
         .grid-form {
           display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
+          grid-template-columns: 1fr;
           gap: 16px;
-          align-items: center;
+          align-items: start;
+          max-width: 760px;
         }
         .tag {
           background: rgba(255,237,115,0.12);
@@ -476,7 +490,7 @@ export default function EntreprisePage() {
           transition: transform 0.25s ease, box-shadow 0.25s ease;
         }
         .cv-card:hover { transform: translateY(-7px); box-shadow: 0 28px 55px rgba(0,0,0,0.32); }
-        @media (max-width: 1050px) { .grid-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        @media (max-width: 1050px) { .grid-form { grid-template-columns: 1fr; } }
         @media (max-width: 700px) {
           .page { padding: 24px; }
           .hero-title { font-size: 38px !important; }
@@ -517,17 +531,29 @@ export default function EntreprisePage() {
           <h2 style={{ marginTop: 0, fontSize: "30px" }}>Informations de l’offre</h2>
 
           <div className="grid-form">
-            <input placeholder="Nom entreprise" value={nomEntreprise} onChange={(e) => setNomEntreprise(e.target.value)} />
+            <select value={civiliteContact} onChange={(e) => setCiviliteContact(e.target.value)}>
+              <option value="">Civilité du contact</option>
+              <option value="Mme">Mme</option>
+              <option value="M.">M.</option>
+              <option value="Autre">Autre</option>
+            </select>
+
             <input placeholder="Nom du contact" value={nomContact} onChange={(e) => setNomContact(e.target.value)} />
-            <input placeholder="Email du contact" value={emailContact} onChange={(e) => setEmailContact(e.target.value)} />
+
+            <input placeholder="Prénom du contact" value={prenomContact} onChange={(e) => setPrenomContact(e.target.value)} />
+
+            <input placeholder="E-mail du contact" value={emailContact} onChange={(e) => setEmailContact(e.target.value)} />
+
             <input placeholder="Téléphone du contact" value={telephoneContact} onChange={(e) => setTelephoneContact(e.target.value)} />
 
-            <input placeholder="Titre du poste" value={titrePoste} onChange={(e) => setTitrePoste(e.target.value)} />
+            <input placeholder="Nom de l'entreprise" value={nomEntreprise} onChange={(e) => setNomEntreprise(e.target.value)} />
+
+            <input placeholder="Intitulé du poste" value={titrePoste} onChange={(e) => setTitrePoste(e.target.value)} />
 
             <select value={ville} onChange={(e) => setVille(e.target.value)}>
               <option value="">Ville de l'offre</option>
               {villes.map((villeOption) => (
-                <option key={villeOption}>{villeOption}</option>
+                <option key={villeOption} value={villeOption}>{villeOption}</option>
               ))}
             </select>
 
@@ -557,32 +583,28 @@ export default function EntreprisePage() {
             </select>
 
             <div className="field">
-              <label htmlFor="nombrePostes">Nombre de postes à pourvoir</label>
               <input
                 id="nombrePostes"
                 type="number"
                 min="1"
                 value={nombrePostes}
                 onChange={(e) => setNombrePostes(Number(e.target.value))}
-                placeholder="Ex. 1"
+                placeholder="Nombre de postes à pourvoir"
               />
               <small>Nombre d’alternants ou de stagiaires recherchés sur cette offre.</small>
             </div>
 
             <div className="field">
-              <label htmlFor="nombreCV">Nombre de CV souhaités</label>
               <input
                 id="nombreCV"
                 type="number"
                 min="1"
                 value={nombreCV}
                 onChange={(e) => setNombreCV(Number(e.target.value))}
-                placeholder="Ex. 5"
+                placeholder="Nombre de CV souhaités"
               />
-              <small>Nombre maximum de profils à proposer à l’entreprise.</small>
+              <small>Nombre maximum de profils que vous souhaitez recevoir.</small>
             </div>
-
-            <div />
           </div>
 
           <textarea placeholder="Description du poste" rows={6} value={description} onChange={(e) => setDescription(e.target.value)} style={{ marginTop: "16px" }} />
@@ -592,11 +614,11 @@ export default function EntreprisePage() {
             <select
               onChange={(e) => {
                 ajouterCompetence(e.target.value);
-                e.target.value = "Ajouter une compétence";
+                e.target.value = "Ajouter des compétences";
               }}
               style={{ marginTop: "10px" }}
             >
-              <option>Ajouter une compétence</option>
+              <option>Ajouter des compétences</option>
               {competencesDisponibles.map((comp) => (
                 <option key={comp}>{comp}</option>
               ))}
